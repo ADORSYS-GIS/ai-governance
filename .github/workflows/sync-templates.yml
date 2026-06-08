@@ -1,0 +1,37 @@
+# Propagate per-repo AI Governance files to target repos by running scripts/sync-templates.zsh.
+#
+# Requires a repo secret `SYNC_PAT` — an org-scoped Personal Access Token with rights to
+# push branches and open pull requests in the target repos. The default `GITHUB_TOKEN`
+# cannot open PRs in OTHER repositories, so the job stays inert until SYNC_PAT is added
+# (guarded by the `if:` below).
+name: Sync Governance Templates
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "templates/**"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # Guarded by SYNC_PAT: the `secrets` context is not available in a job-level `if:`,
+    # so the secret is surfaced as an env var and the script step is gated on it. The job
+    # stays inert (the step is skipped) until the SYNC_PAT secret is added to this repo.
+    env:
+      SYNC_PAT: ${{ secrets.SYNC_PAT }}
+    steps:
+      - name: Checkout
+        if: ${{ env.SYNC_PAT != '' }}
+        uses: actions/checkout@v4
+
+      - name: Install zsh
+        if: ${{ env.SYNC_PAT != '' }}
+        run: sudo apt-get update && sudo apt-get install -y zsh
+
+      - name: Run sync script (apply)
+        if: ${{ env.SYNC_PAT != '' }}
+        env:
+          GH_TOKEN: ${{ env.SYNC_PAT }}
+        run: zsh scripts/sync-templates.zsh --apply

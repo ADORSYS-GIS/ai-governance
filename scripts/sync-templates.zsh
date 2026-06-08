@@ -1,0 +1,134 @@
+#!/usr/bin/env zsh
+# sync-templates.zsh — propagate per-repo AI Governance files to ADORSYS-GIS target repos.
+#
+# For each target repo it opens (or refreshes) a PR that adds the files GitHub does NOT
+# inherit org-wide:
+#   - AGENTS.md, CLAUDE.md, .github/copilot-instructions.md   (built from agent-stanza.md)
+#   - .github/workflows/governance.yml                         (the caller workflow)
+#   - CONTRIBUTING.md
+#
+# It resolves each repo's DEFAULT BRANCH via `gh repo view` (adb-mcp-rs is `master`,
+# the others are `main`) rather than assuming.
+#
+# DRY-RUN by default: it only prints what it would do. Pass --apply to actually push
+# branches and open PRs. Idempotent: skips a repo whose sync branch or PR already exists.
+#
+# Requires: gh (authenticated with rights on the target repos), git.
+# This script is for the maintainer to run; it is also invoked by
+# .github/workflows/sync-templates.yml with --apply when the SYNC_PAT secret is set.
+set -euo pipefail
+
+ORG="ADORSYS-GIS"
+TARGET_REPOS=(adb-mcp-rs ai-helm converse-frontends lightbridge-authz rag-api)
+SYNC_BRANCH="chore/ai-governance-sync"
+
+APPLY=0
+for arg in "$@"; do
+  case "$arg" in
+    --apply) APPLY=1 ;;
+    -h|--help)
+      print "Usage: sync-templates.zsh [--apply]"
+      print "  (no flag)  dry-run: print planned actions only"
+      print "  --apply    push branches and open/refresh PRs"
+      exit 0
+      ;;
+    *) print -u2 "Unknown argument: $arg"; exit 2 ;;
+  esac
+done
+
+# Resolve this kit's directory regardless of where the script is invoked from.
+SCRIPT_DIR=${0:A:h}
+REPO_ROOT=${SCRIPT_DIR:h}
+TEMPLATES_DIR="$REPO_ROOT/templates"
+STANZA_FILE="$TEMPLATES_DIR/agent-stanza.md"
+CALLER_WORKFLOW="$TEMPLATES_DIR/.github/workflows/governance.yml"
+CONTRIBUTING_FILE="$TEMPLATES_DIR/CONTRIBUTING.md"
+
+for f in "$STANZA_FILE" "$CALLER_WORKFLOW" "$CONTRIBUTING_FILE"; do
+  [[ -f "$f" ]] || { print -u2 "Missing source file: $f"; exit 1; }
+done
+
+if (( APPLY )); then
+  print "== sync-templates: APPLY mode (will push branches and open PRs) =="
+else
+  print "== sync-templates: DRY-RUN (no changes will be made; pass --apply to execute) =="
+fi
+
+WORK_ROOT=$(mktemp -d)
+trap 'rm -rf "$WORK_ROOT"' EXIT
+
+for repo in "${TARGET_REPOS[@]}"; do
+  slug="$ORG/$repo"
+  print "\n--- $slug ---"
+
+  # Resolve the default branch (adb-mcp-rs=master, others=main).
+  if ! default_branch=$(gh repo view "$slug" --json defaultBranchRef --jq '.defaultBranchRef.name' 2>/dev/null); then
+    print -u2 "  ! could not query $slug (auth or access?). Skipping."
+    continue
+  fi
+  print "  default branch: $default_branch"
+
+  # Skip if the sync branch already exists remotely (idempotent).
+  if gh api "repos/$slug/branches/$SYNC_BRANCH" >/dev/null 2>&1; then
+    print "  branch $SYNC_BRANCH already exists upstream — skipping (idempotent)."
+    continue
+  fi
+
+  # Skip if an open PR from the sync branch already exists.
+  existing_pr=$(gh pr list --repo "$slug" --head "$SYNC_BRANCH" --state open --json url --jq '.[0].url' 2>/dev/null || true)
+  if [[ -n "$existing_pr" ]]; then
+    print "  open PR already exists: $existing_pr — skipping."
+    continue
+  fi
+
+  if (( ! APPLY )); then
+    print "  would: create branch '$SYNC_BRANCH' off '$default_branch' and add:"
+    print "         AGENTS.md, CLAUDE.md, .github/copilot-instructions.md,"
+    print "         .github/workflows/governance.yml, CONTRIBUTING.md"
+    print "  would: open PR against '$default_branch'."
+    continue
+  fi
+
+  # --- APPLY ---
+  clone_dir="$WORK_ROOT/$repo"
+  gh repo clone "$slug" "$clone_dir" -- --depth 1 --branch "$default_branch"
+  git -C "$clone_dir" checkout -b "$SYNC_BRANCH"
+
+  mkdir -p "$clone_dir/.github/workflows"
+  cp "$STANZA_FILE" "$clone_dir/AGENTS.md"
+  cp "$STANZA_FILE" "$clone_dir/CLAUDE.md"
+  cp "$STANZA_FILE" "$clone_dir/.github/copilot-instructions.md"
+  cp "$CALLER_WORKFLOW" "$clone_dir/.github/workflows/governance.yml"
+  cp "$CONTRIBUTING_FILE" "$clone_dir/CONTRIBUTING.md"
+
+  git -C "$clone_dir" add -A
+  if git -C "$clone_dir" diff --cached --quiet; then
+    print "  no changes to sync (files already up to date) — skipping PR."
+    continue
+  fi
+
+  git -C "$clone_dir" -c user.name="ai-governance-bot" \
+      -c user.email="noreply@adorsys-gis.local" \
+      commit -m "chore: sync AI Governance per-repo files"
+  git -C "$clone_dir" push -u origin "$SYNC_BRANCH"
+
+  gh pr create --repo "$slug" \
+    --base "$default_branch" \
+    --head "$SYNC_BRANCH" \
+    --title "chore: adopt AI Governance kit" \
+    --body "$(cat <<'PRBODY'
+Adopts the ADORSYS-GIS AI Governance per-repo files:
+
+- `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md` — the governance stanza.
+- `.github/workflows/governance.yml` — opts this repo into the reusable PR governance check.
+- `CONTRIBUTING.md` — links the forms, PR template, and DoR/DoD gates.
+
+Source of truth: https://adorsys-gis.github.io/ai-governance/
+
+This PR was generated by `scripts/sync-templates.zsh` in ADORSYS-GIS/ai-governance.
+PRBODY
+)"
+  print "  PR opened against $default_branch."
+done
+
+print "\nDone."
