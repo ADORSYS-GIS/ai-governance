@@ -50,7 +50,7 @@ body:
     attributes:
       label: Scope (In / Out)
       description: What is clearly included and what is explicitly excluded. Anything not listed must be clarified before implementation.
-      value: |
+      placeholder: |
         ### In Scope
         -
 
@@ -132,12 +132,14 @@ body:
         - label: Ticket decomposition
         - label: Technical proposal
         - label: Not used
+        - label: I have declared AI usage above (ticked the relevant items, or "Not used").
+          required: true
 
   - type: checkboxes
     id: human-verification
     attributes:
       label: Human verification completed
-      description: GitHub cannot make individual checkboxes mandatory — the governance CI check is the real gate.
+      description: Tick what you completed. The final accountability box is required; the governance CI check on the PR is the substantive gate.
       options:
         - label: Intent checked against source of truth
         - label: Scope reviewed by Product Owner
@@ -145,3 +147,5 @@ body:
         - label: Risks reviewed
         - label: Acceptance criteria reviewed
         - label: No unverified AI claim remains
+        - label: I am the accountable owner and accept responsibility for this epic.
+          required: true

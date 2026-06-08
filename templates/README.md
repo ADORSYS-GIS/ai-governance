@@ -40,11 +40,13 @@ but firm about presence.
 
 ### A note on checkboxes
 
-GitHub issue forms **cannot make an individual checkbox mandatory** — you can require a
-`checkboxes` *block* to have at least one option ticked, but not a specific option, and PR
-templates have no validation at all. The **CI check is the real gate**: it reads the
-submitted PR body and enforces the substantive requirements above. The checkbox blocks in
-the forms are declarations and prompts, not the enforcement mechanism.
+GitHub issue forms **can** mark an individual checkbox option `required: true`, so each form
+makes one **accountability** option mandatory in the AI Usage Declaration and Human
+Verification blocks. What GitHub cannot express is "at least one of N" — and PR templates
+have no validation at all. So the **CI check remains the substantive gate**: it reads the
+submitted PR body and enforces the requirements above. Required fields use `placeholder:`
+(grey hints), never `value:` (pre-filled content), so a required field is empty until the
+author actually writes something.
 
 ## How propagation works
 
@@ -57,13 +59,19 @@ repo in the org, including ones that aren't ready to adopt the governance gate.)
   `.github/workflows/governance.yml`, `CONTRIBUTING.md`, and the governance stanza
   (`AGENTS.md` / `CLAUDE.md` / `.github/copilot-instructions.md`, built from
   `agent-stanza.md`) — is committed **directly into each target repo** by
-  `scripts/sync-templates.zsh`, which opens/refreshes one PR per repo. The companion
-  workflow `.github/workflows/sync-templates.yml` runs that script (it requires a repo
-  secret `SYNC_PAT`, since the default `GITHUB_TOKEN` cannot open PRs in other repos).
+  `scripts/sync-templates.zsh`, which opens one PR per repo (idempotent — an existing sync
+  branch/PR is left untouched, not auto-updated; see the script header for the update path).
+  The companion workflow `.github/workflows/sync-templates.yml` runs that script (it requires
+  a repo secret `SYNC_PAT`, since the default `GITHUB_TOKEN` cannot open PRs in other repos).
 - The script is **collision-safe**: the stanza is *appended* to an existing
-  `AGENTS.md`/`CLAUDE.md`/`copilot-instructions.md` (never overwritten), and any issue
-  template / PR template / `CONTRIBUTING.md` the repo already maintains is left untouched
-  and flagged for manual reconciliation.
+  `AGENTS.md`/`CLAUDE.md`/`copilot-instructions.md` (never overwritten); issue forms are
+  copied **individually** (a repo with unrelated templates still gets the ones it lacks);
+  and any PR template / `CONTRIBUTING.md` / issue form the repo already owns is left
+  untouched and flagged for manual reconciliation. Missing `epic` / `user-story` / `ticket`
+  labels are created (forms only apply labels that already exist).
+- The generated adoption-PR body itself satisfies the governance gate (it declares AI usage
+  and includes a Verification section), so later sync PRs pass the check in already-governed
+  repos.
 - Target repos and their **default branches differ**: `adb-mcp-rs` uses `master`; the
   others (`ai-helm`, `converse-frontends`, `lightbridge-authz`, `rag-api`) use `main`.
   The sync script resolves each repo's default branch via `gh repo view` rather than

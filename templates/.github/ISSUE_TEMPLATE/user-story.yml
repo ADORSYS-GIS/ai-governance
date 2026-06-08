@@ -16,7 +16,7 @@ body:
     attributes:
       label: Story Statement
       description: As a [user/actor], I want [capability/action], so that [benefit/outcome].
-      value: |
+      placeholder: |
         As a …,
         I want …,
         so that …
@@ -53,7 +53,7 @@ body:
     attributes:
       label: Acceptance Criteria
       description: Functional (Given/When/Then), negative/edge cases, and non-functional criteria. Must be testable.
-      value: |
+      placeholder: |
         ### Functional
         - [ ] Given …, when …, then …
 
@@ -129,12 +129,14 @@ body:
         - label: Generating tests
         - label: Reviewing code
         - label: Not used
+        - label: I have declared AI usage above (ticked the relevant items, or "Not used").
+          required: true
 
   - type: checkboxes
     id: human-verification
     attributes:
       label: Human verification completed
-      description: GitHub cannot make individual checkboxes mandatory — the governance CI check is the real gate.
+      description: Tick what you completed. The final accountability box is required; the governance CI check on the PR is the substantive gate.
       options:
         - label: I checked the story against the source of truth
         - label: I confirmed the acceptance criteria
@@ -142,3 +144,5 @@ body:
         - label: I verified generated code manually
         - label: I verified generated tests manually
         - label: I removed or corrected unsupported AI claims
+        - label: I am the accountable owner and accept responsibility for this story.
+          required: true
