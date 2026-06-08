@@ -1,0 +1,159 @@
+# Reusable AI Governance PR check (hosted in ADORSYS-GIS/ai-governance).
+#
+# What it enforces — the PR body must contain:
+#   1. an "AI Usage Declaration" section with at least one CHECKED option
+#      (ticking "Not used" counts); the heading alone is not enough.
+#   2. a source-of-truth reference (a URL or #123 issue/PR reference) that is not
+#      a `[placeholder]`.
+#   3. a "Verification" section containing REAL evidence — a checked box, a
+#      non-placeholder code block, or a real link — scoped to that section, so the
+#      untouched template's placeholder fences/links do not satisfy the gate.
+#
+# Lenient about formatting (case-insensitive, tolerant of heading variations) but
+# firm about presence. On failure it posts/updates a single sticky PR comment.
+#
+# Fork PRs: GitHub gives `pull_request` workflows a READ-ONLY token on PRs from
+# forks/Dependabot, so commenting may 403. The pass/fail result is still correct;
+# comment posting is best-effort (wrapped in try/catch) and never turns a compliant
+# PR red on its own. We intentionally do NOT use `pull_request_target` (which would
+# run with a writable token in the base-repo context) to avoid that privilege.
+#
+# How repos opt in: add the caller workflow at .github/workflows/governance.yml
+# (see templates/.github/workflows/governance.yml) which calls this with:
+#   uses: ADORSYS-GIS/ai-governance/.github/workflows/governance-check.yml@main
+#   permissions: { pull-requests: write, contents: read }
+#
+# Source of truth: https://adorsys-gis.github.io/ai-governance/
+name: AI Governance Check
+
+on:
+  workflow_call:
+
+jobs:
+  governance-check:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Check PR body for governance requirements
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const STICKY_MARKER = '<!-- ai-governance-check -->';
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.info('No pull_request in payload; nothing to check.');
+              return;
+            }
+
+            const body = pr.body || '';
+            const CHECKBOX = /[-*]\s*\[[xX]\]/;                 // a ticked checkbox (- or * bullet)
+            const URL_OR_REF = /(https?:\/\/\S+)|(^|\s)#\d+/;   // a URL or #123 reference
+
+            // Drop GitHub-template `[placeholder]` tokens so untouched scaffolding doesn't count.
+            const stripPlaceholders = (s) => s.replace(/\[[^\]\n]+\]/g, '');
+
+            // Text under the first heading whose title matches headingRe, up to the next heading.
+            function sectionText(headingRe) {
+              const lines = body.split(/\r?\n/);
+              let capturing = false;
+              const out = [];
+              for (const line of lines) {
+                const h = line.match(/^#{1,6}\s+(.*\S)\s*$/);
+                if (h) {
+                  if (capturing) break;
+                  if (headingRe.test(h[1])) capturing = true;
+                  continue;
+                }
+                if (capturing) out.push(line);
+              }
+              return out.join('\n');
+            }
+
+            // A fenced code block whose content is more than placeholders/whitespace.
+            function hasRealCodeBlock(text) {
+              const fences = text.match(/```[\s\S]*?```/g) || [];
+              return fences.some((f) => {
+                const inner = f.replace(/^```[^\n]*\n?/, '').replace(/```\s*$/, '');
+                return stripPlaceholders(inner).trim().length > 0;
+              });
+            }
+
+            // A real (non-placeholder) URL or #ref somewhere in the given text.
+            const hasRealRef = (text) => URL_OR_REF.test(stripPlaceholders(text));
+
+            const missing = [];
+
+            // 1. AI Usage Declaration — heading AND a checked AI-usage option.
+            // The distributed PR template nests a "Human verification" checklist under the
+            // SAME heading, so scope the required tick to the AI-usage options that precede
+            // it — otherwise ticking only "I accept responsibility" would satisfy this.
+            if (!/ai\s+usage\s+declaration/i.test(body)) {
+              missing.push('an **AI Usage Declaration** section.');
+            } else {
+              const aiSection = sectionText(/ai\s+usage\s+declaration/i);
+              const hv = aiSection.search(/human\s+verification/i);
+              const aiOptions = hv >= 0 ? aiSection.slice(0, hv) : aiSection;
+              if (!CHECKBOX.test(aiOptions)) {
+                missing.push('a **checked AI-usage option** — tick what AI was used for, or "Not used" (a Human-verification tick alone does not count).');
+              }
+            }
+
+            // 2. Source-of-truth reference anywhere in the body.
+            if (!hasRealRef(body)) {
+              missing.push('a **source-of-truth reference** — a URL or a `#123` issue/PR reference.');
+            }
+
+            // 3. Verification section with REAL evidence, scoped to the section.
+            if (!/verification/i.test(body)) {
+              missing.push('a **Verification** section.');
+            } else {
+              const ver = sectionText(/verification/i);
+              const evidence = CHECKBOX.test(ver) || hasRealCodeBlock(ver) || hasRealRef(ver);
+              if (!evidence) {
+                missing.push('**verification evidence inside the Verification section** — a checked box, real command output, or a link (untouched template placeholders do not count).');
+              }
+            }
+
+            // Build / update the sticky comment. Best-effort: tolerate read-only fork tokens.
+            const { owner, repo } = context.repo;
+            const issue_number = pr.number;
+            async function upsertComment(message) {
+              try {
+                const comments = await github.paginate(github.rest.issues.listComments, {
+                  owner, repo, issue_number, per_page: 100,
+                });
+                const existing = comments.find((c) => (c.body || '').includes(STICKY_MARKER));
+                if (existing) {
+                  await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body: message });
+                } else {
+                  await github.rest.issues.createComment({ owner, repo, issue_number, body: message });
+                }
+              } catch (e) {
+                core.warning('Could not post the governance comment (token may be read-only on a fork PR): ' + e.message);
+              }
+            }
+
+            if (missing.length > 0) {
+              const list = missing.map((m) => `- ${m}`).join('\n');
+              await upsertComment(
+                `${STICKY_MARKER}\n` +
+                `### ❌ AI Governance check failed\n\n` +
+                `This PR description is missing the following governance requirements:\n\n` +
+                `${list}\n\n` +
+                `Please update the PR description using the ` +
+                `[pull request template](https://adorsys-gis.github.io/ai-governance/04-pull-request-template) ` +
+                `and edit the PR body to re-run the check.\n\n` +
+                `> AI may accelerate the work, but it must not launder ignorance into polished artifacts.\n` +
+                `> See: https://adorsys-gis.github.io/ai-governance/`
+              );
+              core.setFailed('AI Governance check failed:\n' + missing.map((m) => '  - ' + m.replace(/\*\*/g, '')).join('\n'));
+            } else {
+              await upsertComment(
+                `${STICKY_MARKER}\n` +
+                `### ✅ AI Governance check passed\n\n` +
+                `This PR declares AI usage, references a source of truth, and provides verification evidence. Thank you.`
+              );
+              core.info('AI Governance check passed.');
+            }
