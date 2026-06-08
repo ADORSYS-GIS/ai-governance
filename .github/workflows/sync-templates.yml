@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: Checkout
         if: ${{ env.SYNC_PAT != '' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install zsh
         if: ${{ env.SYNC_PAT != '' }}
