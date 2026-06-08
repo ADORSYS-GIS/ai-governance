@@ -48,16 +48,25 @@ the forms are declarations and prompts, not the enforcement mechanism.
 
 ## How propagation works
 
-- **Issue forms and the PR template** are best distributed once via the org-level
-  `ADORSYS-GIS/.github` repository (GitHub applies `.github/ISSUE_TEMPLATE/*` and
-  `PROFILE`/community defaults org-wide). Creating that repo is a separate, later step.
-- **Per-repo files** that GitHub does *not* inherit org-wide — `AGENTS.md`, `CLAUDE.md`,
-  `.github/copilot-instructions.md` (all built from `agent-stanza.md`), the caller
-  `.github/workflows/governance.yml`, and `CONTRIBUTING.md` — are pushed to each repo by
-  `scripts/sync-templates.zsh`, which opens/refreshes a PR per target repo. The companion
+Distribution is **scoped to the named core repos only** — nothing is applied org-wide,
+and no repo is ever auto-enrolled. (We deliberately do *not* use an org-level
+`ADORSYS-GIS/.github` repository: its community-health defaults would apply to *every*
+repo in the org, including ones that aren't ready to adopt the governance gate.)
+
+- **Everything** in this kit — the issue forms, the PR template, the caller
+  `.github/workflows/governance.yml`, `CONTRIBUTING.md`, and the governance stanza
+  (`AGENTS.md` / `CLAUDE.md` / `.github/copilot-instructions.md`, built from
+  `agent-stanza.md`) — is committed **directly into each target repo** by
+  `scripts/sync-templates.zsh`, which opens/refreshes one PR per repo. The companion
   workflow `.github/workflows/sync-templates.yml` runs that script (it requires a repo
   secret `SYNC_PAT`, since the default `GITHUB_TOKEN` cannot open PRs in other repos).
+- The script is **collision-safe**: the stanza is *appended* to an existing
+  `AGENTS.md`/`CLAUDE.md`/`copilot-instructions.md` (never overwritten), and any issue
+  template / PR template / `CONTRIBUTING.md` the repo already maintains is left untouched
+  and flagged for manual reconciliation.
 - Target repos and their **default branches differ**: `adb-mcp-rs` uses `master`; the
   others (`ai-helm`, `converse-frontends`, `lightbridge-authz`, `rag-api`) use `main`.
   The sync script resolves each repo's default branch via `gh repo view` rather than
   assuming.
+- To enroll a future repo, add it to `TARGET_REPOS` in the sync script and re-run —
+  enrollment is always explicit.
