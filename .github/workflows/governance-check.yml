@@ -85,11 +85,19 @@ jobs:
 
             const missing = [];
 
-            // 1. AI Usage Declaration — heading AND a checked option.
+            // 1. AI Usage Declaration — heading AND a checked AI-usage option.
+            // The distributed PR template nests a "Human verification" checklist under the
+            // SAME heading, so scope the required tick to the AI-usage options that precede
+            // it — otherwise ticking only "I accept responsibility" would satisfy this.
             if (!/ai\s+usage\s+declaration/i.test(body)) {
               missing.push('an **AI Usage Declaration** section.');
-            } else if (!CHECKBOX.test(sectionText(/ai\s+usage\s+declaration/i))) {
-              missing.push('a **checked option in the AI Usage Declaration** — tick what AI was used for, or "Not used".');
+            } else {
+              const aiSection = sectionText(/ai\s+usage\s+declaration/i);
+              const hv = aiSection.search(/human\s+verification/i);
+              const aiOptions = hv >= 0 ? aiSection.slice(0, hv) : aiSection;
+              if (!CHECKBOX.test(aiOptions)) {
+                missing.push('a **checked AI-usage option** — tick what AI was used for, or "Not used" (a Human-verification tick alone does not count).');
+              }
             }
 
             // 2. Source-of-truth reference anywhere in the body.
