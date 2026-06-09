@@ -91,8 +91,6 @@ add_stanza() {
     {
       print ""
       print "$STANZA_MARKER"
-      print "## AI Governance"
-      print ""
       cat "$STANZA_FILE"
     } >> "$dest"
     print "    + appended governance stanza to existing $label"
