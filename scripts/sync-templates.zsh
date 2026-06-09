@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# sync-templates.zsh — propagate the AI Governance kit to ADORSYS-GIS core repos.
+# sync-templates.zsh — propagate the AI Governance kit to the core-AI repos.
 #
 # Scoped to the named core repos ONLY — nothing is applied org-wide, and no repo is
 # ever auto-enrolled. For each target repo it opens one PR that adds:
@@ -17,7 +17,8 @@
 #   - The caller workflow is governance-owned, so it is written unconditionally.
 #
 # It resolves each repo's DEFAULT BRANCH via `gh repo view` (adb-mcp-rs is `master`,
-# the others `main`) rather than assuming.
+# the others `main`) rather than assuming. Targets are full `owner/repo` slugs, so
+# cross-org repos (e.g. `WhyThatFunction/home-os`) are supported.
 #
 # DRY-RUN by default; pass --apply to push branches and open PRs. Idempotent: if a sync
 # branch or open PR already exists it is left untouched (skipped) — it is NOT auto-updated.
@@ -28,8 +29,15 @@
 # .github/workflows/sync-templates.yml with --apply when the SYNC_PAT secret is set.
 set -euo pipefail
 
-ORG="ADORSYS-GIS"
-TARGET_REPOS=(adb-mcp-rs ai-helm converse-frontends lightbridge-authz rag-api)
+# Full `owner/repo` slugs — cross-org targets are supported (home-os is under WhyThatFunction).
+TARGET_REPOS=(
+  ADORSYS-GIS/adb-mcp-rs
+  ADORSYS-GIS/ai-helm
+  ADORSYS-GIS/converse-frontends
+  ADORSYS-GIS/lightbridge-authz
+  ADORSYS-GIS/rag-api
+  WhyThatFunction/home-os
+)
 SYNC_BRANCH="chore/ai-governance-sync"
 STANZA_MARKER="<!-- ai-governance:stanza -->"
 
@@ -108,8 +116,8 @@ add_if_absent() {
   print "    + added $label"
 }
 
-for repo in "${TARGET_REPOS[@]}"; do
-  slug="$ORG/$repo"
+for slug in "${TARGET_REPOS[@]}"; do
+  name="${slug:t}"
   print "\n--- $slug ---"
 
   # Resolve the default branch (adb-mcp-rs=master, others=main).
@@ -142,7 +150,7 @@ for repo in "${TARGET_REPOS[@]}"; do
   fi
 
   # --- APPLY ---
-  clone_dir="$WORK_ROOT/$repo"
+  clone_dir="$WORK_ROOT/$name"
   gh repo clone "$slug" "$clone_dir" -- --depth 1 --branch "$default_branch"
   git -C "$clone_dir" checkout -b "$SYNC_BRANCH"
 
@@ -195,7 +203,7 @@ Adopts the ADORSYS-GIS AI Governance kit for this repo.
 
 ## Intent
 Standardise issues, PRs, and AI-usage discipline by adopting the canonical governance kit.
-Source of truth: https://adorsys-gis.github.io/ai-governance/
+Source of truth: https://github.com/ADORSYS-GIS/ai-governance (doctrine: https://adorsys-gis.github.io/ai-governance/)
 
 ## What changed (added only where not already present)
 - `.github/ISSUE_TEMPLATE/*` — epic, user-story, and dev-ticket issue forms + chooser config.
