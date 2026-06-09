@@ -27,8 +27,9 @@ The **reusable enforcement workflow** lives at the repo root, not here:
 
 1. A consuming repo adds `.github/workflows/governance.yml` (the caller in this kit).
 2. On every pull request (opened / edited / synchronize / reopened), the caller invokes
-   `ADORSYS-GIS/ai-governance/.github/workflows/governance-check.yml@v1.0.0` — pinned to an
-   immutable release tag (not `@main`) so upstream changes never run here unreviewed.
+   the reusable `governance-check.yml` pinned to the **immutable commit SHA** of the `v1.0.0`
+   release (not `@main` or a movable tag), so upstream changes — or a moved tag — never run
+   here unreviewed.
 3. The reusable workflow inspects the PR body and **fails** if it is missing any of:
    - an **AI Usage Declaration** section with a **checked AI-usage option**,
    - a **source-of-truth reference** (a URL or a `#123` ref) in the **intent area** — an
