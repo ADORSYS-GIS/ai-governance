@@ -80,8 +80,11 @@ jobs:
               });
             }
 
-            // A real (non-placeholder) URL or #ref somewhere in the given text.
-            const hasRealRef = (text) => URL_OR_REF.test(stripPlaceholders(text));
+            // Boilerplate governance URLs (the site link in templates) must not count as a
+            // real reference, or they would auto-satisfy the source-of-truth gate.
+            const BOILERPLATE = /https?:\/\/(www\.)?adorsys-gis\.github\.io\/ai-governance\S*/gi;
+            // A real (non-placeholder, non-boilerplate) URL or #ref somewhere in the given text.
+            const hasRealRef = (text) => URL_OR_REF.test(stripPlaceholders(text).replace(BOILERPLATE, ''));
 
             const missing = [];
 
@@ -100,9 +103,13 @@ jobs:
               }
             }
 
-            // 2. Source-of-truth reference anywhere in the body.
-            if (!hasRealRef(body)) {
-              missing.push('a **source-of-truth reference** — a URL or a `#123` issue/PR reference.');
+            // 2. Source-of-truth reference — scoped to the INTENT AREA (everything before the
+            // Verification / Evidence / Screenshots sections), so an evidence-only link (a log,
+            // screenshot, or metrics URL) cannot stand in for the ticket/decision that justifies
+            // the work. Boilerplate governance URLs are already excluded by hasRealRef.
+            const intentArea = body.split(/^#{1,6}\s+.*\b(?:verification|screenshots?|evidence)\b/im)[0];
+            if (!hasRealRef(intentArea)) {
+              missing.push('a **source-of-truth reference** in the summary/intent — a URL or a `#123` issue/PR reference (an evidence-only or boilerplate governance link does not count).');
             }
 
             // 3. Verification section with REAL evidence, scoped to the section.
