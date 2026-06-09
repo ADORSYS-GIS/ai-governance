@@ -27,10 +27,12 @@ The **reusable enforcement workflow** lives at the repo root, not here:
 
 1. A consuming repo adds `.github/workflows/governance.yml` (the caller in this kit).
 2. On every pull request (opened / edited / synchronize / reopened), the caller invokes
-   `ADORSYS-GIS/ai-governance/.github/workflows/governance-check.yml@main`.
+   `ADORSYS-GIS/ai-governance/.github/workflows/governance-check.yml@v1.0.0` — pinned to an
+   immutable release tag (not `@main`) so upstream changes never run here unreviewed.
 3. The reusable workflow inspects the PR body and **fails** if it is missing any of:
-   - an **AI Usage Declaration** section,
-   - a **source-of-truth reference** (a URL or a `#123` issue/PR reference),
+   - an **AI Usage Declaration** section with a **checked AI-usage option**,
+   - a **source-of-truth reference** (a URL or a `#123` ref) in the **intent area** — an
+     evidence-only or boilerplate governance link does not count,
    - a **Verification** section with evidence (commands, links, or checked boxes).
 4. On failure it posts/updates a single **sticky PR comment** listing exactly what's missing.
    It needs `pull-requests: write` (granted in the caller).
@@ -40,13 +42,13 @@ but firm about presence.
 
 ### A note on checkboxes
 
-GitHub issue forms **can** mark an individual checkbox option `required: true`, so each form
-makes one **accountability** option mandatory in the AI Usage Declaration and Human
-Verification blocks. What GitHub cannot express is "at least one of N" — and PR templates
-have no validation at all. So the **CI check remains the substantive gate**: it reads the
-submitted PR body and enforces the requirements above. Required fields use `placeholder:`
-(grey hints), never `value:` (pre-filled content), so a required field is empty until the
-author actually writes something.
+On the issue forms, the **AI Usage Declaration** is a `required` multi-select **dropdown**,
+so a real choice (one or more categories, or "Not used") must be made before submission —
+GitHub cannot require "at least one of N" checkboxes, so a dropdown is used instead. The
+**Human Verification** block keeps a `required: true` accountability checkbox. PR templates
+have no validation at all, so the **CI check remains the substantive gate** for pull requests.
+Required text fields use `placeholder:` (grey hints), never `value:` (pre-filled content), so
+a required field is empty until the author actually writes something.
 
 ## How propagation works
 
