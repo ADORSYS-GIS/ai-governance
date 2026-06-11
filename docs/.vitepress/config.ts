@@ -14,6 +14,7 @@ export default defineConfig({
     nav: [
       { text: 'Vocabulary', link: '/00-vocabulary' },
       { text: 'Doctrine', link: '/13-doctrine' },
+      { text: 'Who uses this', link: '/adopters' },
       { text: 'GitHub', link: REPO_URL },
     ],
     sidebar: [
@@ -53,6 +54,10 @@ export default defineConfig({
           { text: 'AI working agreement', link: '/12-ai-working-agreement' },
           { text: 'Doctrine', link: '/13-doctrine' },
         ],
+      },
+      {
+        text: 'Adoption',
+        items: [{ text: 'Who uses this', link: '/adopters' }],
       },
     ],
     socialLinks: [{ icon: 'github', link: REPO_URL }],
