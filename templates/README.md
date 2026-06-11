@@ -27,8 +27,9 @@ The **reusable enforcement workflow** lives at the repo root, not here:
 
 1. A consuming repo adds `.github/workflows/governance.yml` (the caller in this kit).
 2. On every pull request (opened / edited / synchronize / reopened), the caller invokes
-   `ADORSYS-GIS/ai-governance/.github/workflows/governance-check.yml@v1.0.0` — pinned to an
-   immutable release tag (not `@main`) so upstream changes never run here unreviewed.
+   the reusable `governance-check.yml` pinned to the **immutable commit SHA** of the `v1.0.0`
+   release (not `@main` or a movable tag), so upstream changes — or a moved tag — never run
+   here unreviewed.
 3. The reusable workflow inspects the PR body and **fails** if it is missing any of:
    - an **AI Usage Declaration** section with a **checked AI-usage option**,
    - a **source-of-truth reference** (a URL or a `#123` ref) in the **intent area** — an
@@ -56,6 +57,8 @@ Distribution is **scoped to the named core repos only** — nothing is applied o
 and no repo is ever auto-enrolled. (We deliberately do *not* use an org-level
 `ADORSYS-GIS/.github` repository: its community-health defaults would apply to *every*
 repo in the org, including ones that aren't ready to adopt the governance gate.)
+Targets are full `owner/repo` slugs, so the set can span organisations — the core fleet
+includes `WhyThatFunction/home-os` alongside the `ADORSYS-GIS` repos.
 
 - **Everything** in this kit — the issue forms, the PR template, the caller
   `.github/workflows/governance.yml`, `CONTRIBUTING.md`, and the governance stanza
@@ -74,9 +77,9 @@ repo in the org, including ones that aren't ready to adopt the governance gate.)
 - The generated adoption-PR body itself satisfies the governance gate (it declares AI usage
   and includes a Verification section), so later sync PRs pass the check in already-governed
   repos.
-- Target repos and their **default branches differ**: `adb-mcp-rs` uses `master`; the
-  others (`ai-helm`, `converse-frontends`, `lightbridge-authz`, `rag-api`) use `main`.
-  The sync script resolves each repo's default branch via `gh repo view` rather than
-  assuming.
-- To enroll a future repo, add it to `TARGET_REPOS` in the sync script and re-run —
-  enrollment is always explicit.
+- Target repos and their **default branches differ**: `ADORSYS-GIS/adb-mcp-rs` uses `master`;
+  the others (`ai-helm`, `converse-frontends`, `lightbridge-authz`, `rag-api`, and
+  `WhyThatFunction/home-os`) use `main`. The sync script resolves each repo's default branch
+  via `gh repo view` rather than assuming.
+- To enroll a future repo, add its full `owner/repo` slug to `TARGET_REPOS` in the sync
+  script and re-run — enrollment is always explicit, and cross-org targets are supported.
