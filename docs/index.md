@@ -26,4 +26,7 @@ features:
   - title: Culture
     details: The working agreement and the one-page doctrine that keep humans accountable.
     link: /12-ai-working-agreement
+  - title: Who uses this
+    details: The projects already running the governance kit and its advisory PR gate.
+    link: /adopters
 ---
