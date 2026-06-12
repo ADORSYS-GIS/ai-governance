@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "packageManager": "pnpm@11.5.2",
-  "description": "VitePress documentation site for AI-Helm Governance.",
+  "description": "VitePress documentation site for AI Delivery Governance.",
   "type": "module",
   "scripts": {
     "docs:dev": "vitepress dev docs",

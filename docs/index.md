@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: AI-Helm Governance
+  name: AI Delivery Governance
   text: Discipline for AI-heavy teams
   tagline: AI may accelerate the work, but it must not launder ignorance into polished artifacts.
   actions:

@@ -1,4 +1,4 @@
-# AI-Helm Governance — Scrum Artifacts
+# AI Delivery Governance — Scrum Artifacts
 
 Copy-paste-ready Scrum artifacts for an AI-heavy team. These templates add the
 discipline layer that golden paths and tooling do not: **human accountability,

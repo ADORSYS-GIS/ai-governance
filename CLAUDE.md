@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository is
 
-This is a **documentation repository** holding AI-Helm governance text material: a set
+This is a **documentation repository** holding AI Delivery Governance text material: a set
 of copy-paste-ready Scrum artifacts for AI-heavy teams. The throughline of every
 document is a discipline layer on top of AI-assisted work — **human accountability,
 verification, and intent preservation**. There is no application code, build, or test
