@@ -29,4 +29,7 @@ features:
   - title: Who uses this
     details: The projects already running the governance kit and its advisory PR gate.
     link: /adopters
+  - title: Perspectives
+    details: Will Scrum survive the AI era? The debate — and the bigger-picture argument behind this kit.
+    link: /perspectives/scrum-in-the-ai-era
 ---
