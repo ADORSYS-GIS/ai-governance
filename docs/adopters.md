@@ -1,6 +1,6 @@
 # Who uses this
 
-These projects have adopted the AI-Helm governance kit — the work-item templates, the
+These projects have adopted the AI Delivery Governance kit — the work-item templates, the
 PR template, and the advisory [`governance-check`](https://github.com/ADORSYS-GIS/ai-governance/blob/main/.github/workflows/governance-check.yml)
 gate pinned to an immutable release SHA. Each repo carries the agent stanza (`CLAUDE.md` /
 `AGENTS.md` / Copilot instructions) so humans **and** assistants are held to the same bar:

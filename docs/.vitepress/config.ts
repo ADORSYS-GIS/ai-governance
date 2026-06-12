@@ -4,7 +4,7 @@ const REPO_URL = 'https://github.com/ADORSYS-GIS/ai-governance'
 
 export default defineConfig({
   base: '/ai-governance/',
-  title: 'AI-Helm Governance',
+  title: 'AI Delivery Governance',
   description:
     'Copy-paste-ready Scrum artifacts for AI-heavy teams — a discipline layer of human accountability, verification, and intent preservation on top of AI-assisted work.',
   lastUpdated: true,
