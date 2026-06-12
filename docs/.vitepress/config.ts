@@ -14,6 +14,7 @@ export default defineConfig({
     nav: [
       { text: 'Vocabulary', link: '/00-vocabulary' },
       { text: 'Doctrine', link: '/13-doctrine' },
+      { text: 'Perspectives', link: '/perspectives/scrum-in-the-ai-era' },
       { text: 'Who uses this', link: '/adopters' },
       { text: 'GitHub', link: REPO_URL },
     ],
@@ -53,6 +54,14 @@ export default defineConfig({
         items: [
           { text: 'AI working agreement', link: '/12-ai-working-agreement' },
           { text: 'Doctrine', link: '/13-doctrine' },
+        ],
+      },
+      {
+        text: 'Perspectives',
+        items: [
+          { text: 'Will Scrum survive the AI era?', link: '/perspectives/scrum-in-the-ai-era' },
+          { text: 'The case that it survives', link: '/perspectives/the-case-it-survives' },
+          { text: 'The case that it fades', link: '/perspectives/the-case-it-fades' },
         ],
       },
       {
