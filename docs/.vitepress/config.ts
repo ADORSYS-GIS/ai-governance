@@ -65,6 +65,22 @@ export default defineConfig({
         ],
       },
       {
+        text: 'Integrations',
+        items: [
+          {
+            text: 'OpenCode',
+            collapsed: false,
+            items: [
+              { text: 'Overview', link: '/integrations/opencode/00-overview' },
+              { text: 'VSCode', link: '/integrations/opencode/01-vscode' },
+              { text: 'IntelliJ', link: '/integrations/opencode/02-intellij' },
+              { text: 'CLI', link: '/integrations/opencode/03-cli' },
+              { text: 'GitHub Actions', link: '/integrations/opencode/04-github-actions' },
+            ],
+          },
+        ],
+      },
+      {
         text: 'Adoption',
         items: [{ text: 'Who uses this', link: '/adopters' }],
       },

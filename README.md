@@ -39,3 +39,15 @@ Every completed task must be verified.
 | 11 | [Sprint retrospective template](docs/11-sprint-retrospective.md) | Admitting what actually happened |
 | 12 | [AI working agreement](docs/12-ai-working-agreement.md) | The cultural artifact above everything |
 | 13 | [Doctrine](docs/13-doctrine.md) | The blunt rule to keep visible |
+
+## Integrations
+
+### OpenCode
+
+| Guide | What it covers |
+|-------|---------------|
+| [Overview](docs/integrations/opencode/00-overview.md) | Prerequisites, authentication, governance note |
+| [VSCode](docs/integrations/opencode/01-vscode.md) | Extension install, keyboard shortcuts, Plan/Build mode |
+| [IntelliJ](docs/integrations/opencode/02-intellij.md) | Terminal-based usage, editor config, split panes |
+| [CLI](docs/integrations/opencode/03-cli.md) | TUI commands, non-interactive mode, session management, web UI |
+| [GitHub Actions](docs/integrations/opencode/04-github-actions.md) | Composite action setup, secrets, PR/issue-comment workflow |
