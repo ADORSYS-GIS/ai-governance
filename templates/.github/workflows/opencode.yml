@@ -43,5 +43,5 @@ jobs:
       audience: ${{ vars.OPENCODE_GATEWAY_AUDIENCE }}
       # Optional overrides (defaults target the camer-digital gateway):
       # auto_model: camer-digital/adorsys-reviewer
-      # manual_model: camer-digital/glm-5
-      # issue_model: camer-digital/glm-5
+      # manual_model: camer-digital/adorsys-reviewer-pro
+      # issue_model: camer-digital/adorsys-reviewer-pro

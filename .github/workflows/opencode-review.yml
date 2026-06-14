@@ -40,12 +40,12 @@ on:
         description: "Model for /oc-triggered PR reviews."
         required: false
         type: string
-        default: "camer-digital/glm-5"
+        default: "camer-digital/adorsys-reviewer-pro"
       issue_model:
         description: "Model for /oc issue tasks."
         required: false
         type: string
-        default: "camer-digital/glm-5"
+        default: "camer-digital/adorsys-reviewer-pro"
 
 jobs:
   detect-trigger:
