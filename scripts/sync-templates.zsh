@@ -30,13 +30,26 @@
 set -euo pipefail
 
 # Full `owner/repo` slugs — cross-org targets are supported (home-os is under WhyThatFunction).
+# ai-governance is itself a target so the kit dogfoods its own source repo — future
+# template edits flow back here too. (Self-targeting is safe: the script clones the repo,
+# adds only the per-repo .github files, and never touches templates/ or the kit itself.)
+# The governance repo opts OUT of the opencode caller — see OPENCODE_OPT_OUT_REPOS below.
 TARGET_REPOS=(
   ADORSYS-GIS/adb-mcp-rs
+  ADORSYS-GIS/ai-governance
   ADORSYS-GIS/ai-helm
   ADORSYS-GIS/converse-frontends
   ADORSYS-GIS/lightbridge-authz
   ADORSYS-GIS/rag-api
   WhyThatFunction/home-os
+)
+
+# Repos that should NOT receive the opencode AI-review caller. ai-governance is a docs
+# repo (low value reviewing prose) and, because OPENCODE_GATEWAY_AUDIENCE is an org-level
+# variable, the caller would be active there and trip the bot-approval re-trigger loop on
+# every PR (ai-governance#10). Forms/PR-template/governance-gate still sync; opencode does not.
+OPENCODE_OPT_OUT_REPOS=(
+  ADORSYS-GIS/ai-governance
 )
 SYNC_BRANCH="chore/ai-governance-sync"
 STANZA_MARKER="<!-- ai-governance:stanza -->"
@@ -166,7 +179,12 @@ for slug in "${TARGET_REPOS[@]}"; do
 
   # opencode review caller — seeded only if absent (the repo owns it after, and may
   # tune models/audience). No-ops in repos without OPENCODE_GATEWAY_AUDIENCE set.
-  add_if_absent "$OPENCODE_WORKFLOW" "$clone_dir/.github/workflows/opencode.yml" ".github/workflows/opencode.yml"
+  # Skipped for repos in OPENCODE_OPT_OUT_REPOS (e.g. ai-governance — see note above).
+  if (( ${OPENCODE_OPT_OUT_REPOS[(Ie)$slug]} )); then
+    print "    = opencode caller intentionally skipped for $slug (opt-out)."
+  else
+    add_if_absent "$OPENCODE_WORKFLOW" "$clone_dir/.github/workflows/opencode.yml" ".github/workflows/opencode.yml"
+  fi
 
   # Issue forms — copy each form individually, so a repo that already has unrelated
   # templates still receives the specific governance forms it is missing.
