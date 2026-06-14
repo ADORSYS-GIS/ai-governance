@@ -1,0 +1,199 @@
+# Reusable opencode review (hosted in ADORSYS-GIS/ai-governance).
+#
+# Runs an opencode PR review / issue task, authenticating to the AI gateway via
+# the lightbridge-repo-auth GitHub-OIDC binding (ai-helm ADR-0047) — the calling
+# repo's own `id-token` token, no shared key. The review is posted by the default
+# github-actions[bot] (use_github_token).
+#
+# How a repo opts in: add the caller workflow at .github/workflows/opencode.yml
+# (see templates/.github/workflows/opencode.yml), set the org/repo variable
+# OPENCODE_GATEWAY_AUDIENCE to its Source audience, and call this with:
+#   uses: ADORSYS-GIS/ai-governance/.github/workflows/opencode-review.yml@<sha>
+#
+# The third-party reviewer action (anomalyco/opencode/github) is pinned here, so
+# consuming repos inherit a vetted version; bump it deliberately.
+name: opencode review (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      audience:
+        description: "GHA OIDC audience = the repo org's lightbridge-repo-auth Source URL."
+        required: true
+        type: string
+      gateway_base_url:
+        description: "OpenAI-compatible base URL of the AI gateway."
+        required: false
+        type: string
+        default: "https://api.ai.camer.digital/v1"
+      provider:
+        description: "opencode provider id (must match the model prefix below)."
+        required: false
+        type: string
+        default: "camer-digital"
+      auto_model:
+        description: "Model for automatic PR reviews."
+        required: false
+        type: string
+        default: "camer-digital/adorsys-reviewer"
+      manual_model:
+        description: "Model for /oc-triggered PR reviews."
+        required: false
+        type: string
+        default: "camer-digital/adorsys-reviewer-pro"
+      issue_model:
+        description: "Model for /oc issue tasks."
+        required: false
+        type: string
+        default: "camer-digital/adorsys-reviewer-pro"
+      runs_on:
+        description: "Runner label for both jobs — set a self-hosted label for repos without GitHub-hosted runners. Single label (use a runner group/label for multi-label fleets)."
+        required: false
+        type: string
+        default: "ubuntu-latest"
+
+jobs:
+  detect-trigger:
+    runs-on: ${{ inputs.runs_on }}
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      run_kind: ${{ steps.check.outputs.run_kind }}
+      pr_number: ${{ steps.check.outputs.pr_number }}
+      issue_number: ${{ steps.check.outputs.issue_number }}
+    steps:
+      - id: check
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          EVENT_NAME: ${{ github.event_name }}
+          IS_PR: ${{ github.event.issue.pull_request != '' || github.event.pull_request != '' }}
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number || github.event.issue.number }}"
+          ISSUE_NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "run_kind=auto_pr_review" >> "$GITHUB_OUTPUT"
+            echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" = "issue_comment" ] || [ "$EVENT_NAME" = "pull_request_review_comment" ]; then
+            if echo "$COMMENT_BODY" | grep -qE '(^|[[:space:]])/(oc|opencode)\b'; then
+              if [ "$IS_PR" = "true" ]; then
+                echo "should_run=true" >> "$GITHUB_OUTPUT"
+                echo "run_kind=manual_pr_review" >> "$GITHUB_OUTPUT"
+                echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+                echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+              else
+                echo "should_run=true" >> "$GITHUB_OUTPUT"
+                echo "run_kind=issue_task" >> "$GITHUB_OUTPUT"
+                echo "pr_number=" >> "$GITHUB_OUTPUT"
+                echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+              fi
+            else
+              echo "should_run=false" >> "$GITHUB_OUTPUT"
+              echo "run_kind=none" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "run_kind=none" >> "$GITHUB_OUTPUT"
+          fi
+
+  opencode:
+    needs: detect-trigger
+    if: needs.detect-trigger.outputs.should_run == 'true'
+    runs-on: ${{ inputs.runs_on }}
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Bot Details
+        id: bot-details
+        uses: raven-actions/bot-details@v1
+
+      - name: Setup credentials
+        run: |
+          git config --global user.name "${{ steps.bot-details.outputs.name }}"
+          git config --global user.email "${{ steps.bot-details.outputs.email }}"
+          git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf https://github.com/
+
+      - name: Mint gateway OIDC token (lightbridge-repo-auth binding, ADR-0047)
+        # This run's GitHub Actions OIDC token, audience = the org's Source.
+        # Authorino validates it and lightbridge-repo-auth resolves owner→account.
+        # Keyless — GitHub mints it; needs id-token: write on the caller job.
+        uses: actions/github-script@v9
+        env:
+          AUDIENCE: ${{ inputs.audience }}
+        with:
+          script: |
+            const token = await core.getIDToken(process.env.AUDIENCE);
+            core.setSecret(token);
+            // opencode reads this via {env:CAMER_DIGITAL_API_KEY} in the config below
+            core.exportVariable('CAMER_DIGITAL_API_KEY', token);
+
+      - name: Write opencode config (gateway provider via the OIDC binding)
+        env:
+          PROVIDER: ${{ inputs.provider }}
+          BASE_URL: ${{ inputs.gateway_base_url }}
+          AUTO_MODEL: ${{ inputs.auto_model }}
+          MANUAL_MODEL: ${{ inputs.manual_model }}
+          ISSUE_MODEL: ${{ inputs.issue_model }}
+        run: |
+          # Distinct bare model ids (strip the "provider/" prefix) used below.
+          models=$(printf '%s\n' "$AUTO_MODEL" "$MANUAL_MODEL" "$ISSUE_MODEL" \
+            | sed 's|^[^/]*/||' | sort -u | sed 's/.*/"&": {}/' | paste -sd, -)
+          cat > opencode.json <<JSON
+          {
+            "\$schema": "https://opencode.ai/config.json",
+            "provider": {
+              "$PROVIDER": {
+                "npm": "@ai-sdk/openai-compatible",
+                "options": {
+                  "baseURL": "$BASE_URL",
+                  "apiKey": "{env:CAMER_DIGITAL_API_KEY}"
+                },
+                "models": { $models }
+              }
+            }
+          }
+          JSON
+          cat opencode.json
+
+      - name: Run OpenCode Review
+        # Third-party reviewer action — pinned (repo-write scopes; supply-chain
+        # control). Bump deliberately and verify release notes.
+        uses: anomalyco/opencode/github@v1.16.2
+        env:
+          # CAMER_DIGITAL_API_KEY (the minted OIDC token) is in GITHUB_ENV;
+          # opencode reads it via {env:...} in the provider config above.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          model: ${{ needs.detect-trigger.outputs.run_kind == 'manual_pr_review' && inputs.manual_model || needs.detect-trigger.outputs.run_kind == 'issue_task' && inputs.issue_model || inputs.auto_model }}
+          agent: ${{ needs.detect-trigger.outputs.run_kind == 'issue_task' && 'build' || needs.detect-trigger.outputs.run_kind == 'manual_pr_review' && 'manual-review' || 'auto-review' }}
+          use_github_token: true
+
+      - name: Report failure
+        if: failure()
+        env:
+          PR_NUMBER: ${{ needs.detect-trigger.outputs.pr_number }}
+          ISSUE_NUMBER: ${{ needs.detect-trigger.outputs.issue_number }}
+          RUN_KIND: ${{ needs.detect-trigger.outputs.run_kind }}
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = process.env.RUN_KIND === 'issue_task'
+              ? Number(process.env.ISSUE_NUMBER)
+              : Number(process.env.PR_NUMBER)
+            const body = process.env.RUN_KIND === 'issue_task'
+              ? `🤖 Task failed. [View logs](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`
+              : `🤖 Review failed. [View logs](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`
+            if (!issueNumber) return
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body,
+            })

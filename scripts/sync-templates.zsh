@@ -62,10 +62,11 @@ TEMPLATES_DIR="$REPO_ROOT/templates"
 STANZA_FILE="$TEMPLATES_DIR/agent-stanza.md"
 CONTRIBUTING_FILE="$TEMPLATES_DIR/CONTRIBUTING.md"
 CALLER_WORKFLOW="$TEMPLATES_DIR/.github/workflows/governance.yml"
+OPENCODE_WORKFLOW="$TEMPLATES_DIR/.github/workflows/opencode.yml"
 ISSUE_TEMPLATE_DIR="$TEMPLATES_DIR/.github/ISSUE_TEMPLATE"
 PR_TEMPLATE="$TEMPLATES_DIR/.github/PULL_REQUEST_TEMPLATE.md"
 
-for f in "$STANZA_FILE" "$CONTRIBUTING_FILE" "$CALLER_WORKFLOW" "$PR_TEMPLATE"; do
+for f in "$STANZA_FILE" "$CONTRIBUTING_FILE" "$CALLER_WORKFLOW" "$OPENCODE_WORKFLOW" "$PR_TEMPLATE"; do
   [[ -f "$f" ]] || { print -u2 "Missing source file: $f"; exit 1; }
 done
 [[ -d "$ISSUE_TEMPLATE_DIR" ]] || { print -u2 "Missing source dir: $ISSUE_TEMPLATE_DIR"; exit 1; }
@@ -162,6 +163,10 @@ for slug in "${TARGET_REPOS[@]}"; do
   # Caller workflow is governance-owned — write unconditionally.
   cp "$CALLER_WORKFLOW" "$clone_dir/.github/workflows/governance.yml"
   print "    + .github/workflows/governance.yml"
+
+  # opencode review caller — seeded only if absent (the repo owns it after, and may
+  # tune models/audience). No-ops in repos without OPENCODE_GATEWAY_AUDIENCE set.
+  add_if_absent "$OPENCODE_WORKFLOW" "$clone_dir/.github/workflows/opencode.yml" ".github/workflows/opencode.yml"
 
   # Issue forms — copy each form individually, so a repo that already has unrelated
   # templates still receives the specific governance forms it is missing.
