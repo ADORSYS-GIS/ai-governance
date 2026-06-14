@@ -28,10 +28,20 @@ name: AI Governance Check
 
 on:
   workflow_call:
+    inputs:
+      runs-on:
+        description: >-
+          Runner label(s) the check runs on. Defaults to GitHub-hosted
+          ubuntu-latest; pass a self-hosted label (e.g. an ARC scale-set name)
+          to run it on your own runners. Backward-compatible: callers that don't
+          set it keep ubuntu-latest.
+        required: false
+        type: string
+        default: ubuntu-latest
 
 jobs:
   governance-check:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
     permissions:
       pull-requests: write
       contents: read
