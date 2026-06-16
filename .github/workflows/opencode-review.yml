@@ -12,6 +12,23 @@
 #
 # The third-party reviewer action (anomalyco/opencode/github) is pinned here, so
 # consuming repos inherit a vetted version; bump it deliberately.
+#
+# ⚠️ Self-trigger fix (#10): the action's `opencode github run` does a
+# `git add . && git commit` of whatever is dirty in the worktree before posting
+# its verdict, to support agents that legitimately edit code. The provider
+# config used to be written to a real `opencode.json` file in the checkout for
+# the review/auto-review/manual-review agents (which never edit code) — any
+# repo whose branch predated the file's `.gitignore` entry got it swept into
+# that commit, posted as `github-actions[bot]`, which re-triggered `pull_request:
+# synchronize` on its own commit and failed the action's actor-permission check
+# (actor `github-actions[bot]` has no write access). Fix: never put the config
+# file in the worktree at all — opencode also reads provider config from the
+# OPENCODE_CONFIG_CONTENT env var (merged in by packages/opencode/src/config/
+# config.ts), so nothing is written to disk in the repo and there is nothing
+# for `git add .` to pick up. Kept the `github.actor` guard on the `opencode`
+# job too, as a second line of defense for any other run kind (e.g. `issue_task`
+# /build agent) that intentionally commits and could otherwise still
+# self-retrigger.
 name: opencode review (reusable)
 
 on:
@@ -99,7 +116,10 @@ jobs:
 
   opencode:
     needs: detect-trigger
-    if: needs.detect-trigger.outputs.should_run == 'true'
+    # github.actor guard (#10): never run a job whose own prior run committed to
+    # the branch — stops the bot-approval-commit → re-trigger → permission-check
+    # failure loop, regardless of what (if anything) that commit contained.
+    if: needs.detect-trigger.outputs.should_run == 'true' && github.actor != 'github-actions[bot]'
     runs-on: ${{ inputs.runs_on }}
     timeout-minutes: 20
     steps:
@@ -134,6 +154,10 @@ jobs:
             core.exportVariable('CAMER_DIGITAL_API_KEY', token);
 
       - name: Write opencode config (gateway provider via the OIDC binding)
+        # Exported via OPENCODE_CONFIG_CONTENT, NOT written to a file in the
+        # checkout (see the header note / #10) — opencode merges this env var's
+        # JSON straight into its config, so the worktree stays clean and the
+        # review action's `git add .` has nothing of ours to pick up.
         env:
           PROVIDER: ${{ inputs.provider }}
           BASE_URL: ${{ inputs.gateway_base_url }}
@@ -144,7 +168,7 @@ jobs:
           # Distinct bare model ids (strip the "provider/" prefix) used below.
           models=$(printf '%s\n' "$AUTO_MODEL" "$MANUAL_MODEL" "$ISSUE_MODEL" \
             | sed 's|^[^/]*/||' | sort -u | sed 's/.*/"&": {}/' | paste -sd, -)
-          cat > opencode.json <<JSON
+          config=$(cat <<JSON
           {
             "\$schema": "https://opencode.ai/config.json",
             "provider": {
@@ -159,15 +183,22 @@ jobs:
             }
           }
           JSON
-          cat opencode.json
+          )
+          echo "$config"
+          {
+            echo "OPENCODE_CONFIG_CONTENT<<OPENCODE_CONFIG_EOF"
+            echo "$config"
+            echo "OPENCODE_CONFIG_EOF"
+          } >> "$GITHUB_ENV"
 
       - name: Run OpenCode Review
         # Third-party reviewer action — pinned (repo-write scopes; supply-chain
         # control). Bump deliberately and verify release notes.
         uses: anomalyco/opencode/github@v1.16.2
         env:
-          # CAMER_DIGITAL_API_KEY (the minted OIDC token) is in GITHUB_ENV;
-          # opencode reads it via {env:...} in the provider config above.
+          # CAMER_DIGITAL_API_KEY (the minted OIDC token) and OPENCODE_CONFIG_CONTENT
+          # (the provider config) are both in GITHUB_ENV from the prior steps;
+          # opencode reads the former via {env:...} inside the latter.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: ${{ needs.detect-trigger.outputs.run_kind == 'manual_pr_review' && inputs.manual_model || needs.detect-trigger.outputs.run_kind == 'issue_task' && inputs.issue_model || inputs.auto_model }}
