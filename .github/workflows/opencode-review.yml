@@ -29,6 +29,13 @@
 # job too, as a second line of defense for any other run kind (e.g. `issue_task`
 # /build agent) that intentionally commits and could otherwise still
 # self-retrigger.
+#
+# ⚠️ Shallow-clone fix: fetch-depth: 0 (full clone) is required. A shallow
+# fetch (depth: 1) only retrieves objects for the PR branch tip. If the repo
+# already has an `opencode` remote branch from a prior run, `git checkout opencode`
+# inside the action auto-tracks origin/opencode but can't read its tree objects
+# (fatal: unable to read tree). Full clone also gives the review agent complete
+# git history for accurate diff computation.
 name: opencode review (reusable)
 
 on:
@@ -126,7 +133,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          fetch-depth: 1
+          # Full clone: required so `git checkout opencode` inside the action can
+          # resolve a pre-existing `opencode` remote branch's tree objects. A
+          # shallow clone (depth 1) only fetches the PR branch tip and causes
+          # "fatal: unable to read tree" when origin/opencode already exists.
+          # Also gives the review agent complete history for diff computation.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Bot Details
