@@ -31,3 +31,4 @@ declared AI usage, a named source of truth, and real verification evidence on ev
 | Project | What it is | Stack |
 | --- | --- | --- |
 | vymalo-shop *(private)* | E-commerce storefront, [shop.vymalo.com](https://shop.vymalo.com) | Next.js · Prisma · Stripe |
+| [opencode-oauth2](https://github.com/vymalo/opencode-oauth2) | OpenCode Toolbelt — OAuth2/OIDC auth, model-metadata, rate-limit & browser-automation plugins for OpenCode | TypeScript · OpenCode |
