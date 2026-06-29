@@ -77,7 +77,7 @@ This method offers superior integration, including **visual code reviews**, **au
    - **Connect to Server**: If you already have `opencode serve` running, enter `127.0.0.1:4096`.
 3. The OpenCode chat window will appear in the tool window bar.
 
-> **Keyboard shortcuts differ from VSCode.** For VSCode shortcuts, see [VSCode Integration](01-vscode-integration.md).
+> **Keyboard shortcuts differ from VSCode.** For VSCode shortcuts, see [VSCode Integration](01-vscode.md).
 
 ### 3. How It Works
 
