@@ -26,6 +26,7 @@ Before setting up PR reviews, ensure you have completed the [GitHub Actions Inte
 
 Create `.github/workflows/opencode.yml` in your repository:
 
+::: v-pre
 ```yaml
 name: opencode
 
@@ -53,6 +54,7 @@ jobs:
     with:
       audience: ${{ vars.OPENCODE_GATEWAY_AUDIENCE }}
 ```
+:::
 
 > **Supply-chain control:** Pin `@main` to an immutable SHA for production use. Bump the SHA deliberately when adopting new versions.
 
@@ -87,12 +89,14 @@ The reusable workflow supports optional overrides:
 
 Example with overrides:
 
+::: v-pre
 ```yaml
 with:
   audience: ${{ vars.OPENCODE_GATEWAY_AUDIENCE }}
   auto_model: camer-digital/adorsys-reviewer
   runs_on: self-hosted
 ```
+:::
 
 ## Troubleshooting
 
@@ -148,5 +152,5 @@ Ensure `OPENCODE_GATEWAY_AUDIENCE` is set as a repository or organization variab
 ## Related
 
 - [GitHub Actions Integration](../github-actions/00-github-actions.md) — Foundational setup (app installation, OIDC tokens, gateway auth)
-- [VSCode Integration](01-vscode-integration.md) — Local development setup
-- [CLI Integration](03-cli-integration.md) — Terminal and TUI usage
+- [VSCode Integration](01-vscode.md) — Local development setup
+- [CLI Integration](03-cli.md) — Terminal and TUI usage

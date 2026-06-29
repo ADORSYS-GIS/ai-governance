@@ -9,7 +9,7 @@
 | [VSCode](01-vscode.md) | Extension install, keyboard shortcuts, Plan/Build mode |
 | [IntelliJ](02-intellij.md) | Terminal-based usage, editor config, split panes |
 | [CLI](03-cli.md) | TUI commands, non-interactive mode, session management, web UI |
-| [GitHub Actions](04-github-actions.md) | Composite action setup, secrets, PR/issue-comment workflow |
+| [GitHub Actions](04-github-pr-reviews.md) | Composite action setup, secrets, PR/issue-comment workflow |
 
 ## Common Prerequisites
 

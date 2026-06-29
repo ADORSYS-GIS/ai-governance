@@ -1,8 +1,14 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
 
 const REPO_URL = 'https://github.com/ADORSYS-GIS/ai-governance'
 
-export default defineConfig({
+export default withMermaid(defineConfig({
+  vite: {
+    ssr: {
+      noExternal: ['mermaid', 'vitepress-plugin-mermaid'],
+    },
+  },
   base: '/ai-governance/',
   title: 'AI Delivery Governance',
   description:
@@ -75,7 +81,14 @@ export default defineConfig({
               { text: 'VSCode', link: '/integrations/opencode/01-vscode' },
               { text: 'IntelliJ', link: '/integrations/opencode/02-intellij' },
               { text: 'CLI', link: '/integrations/opencode/03-cli' },
-              { text: 'GitHub Actions', link: '/integrations/opencode/04-github-actions' },
+              { text: 'GitHub PR Reviews', link: '/integrations/opencode/04-github-pr-reviews' },
+            ],
+          },
+          {
+            text: 'GitHub Actions',
+            collapsed: false,
+            items: [
+              { text: 'Overview', link: '/integrations/github-actions/00-github-actions' },
             ],
           },
         ],
@@ -87,4 +100,4 @@ export default defineConfig({
     ],
     socialLinks: [{ icon: 'github', link: REPO_URL }],
   },
-})
+}))

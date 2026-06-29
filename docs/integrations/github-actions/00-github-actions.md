@@ -102,6 +102,7 @@ GitHub Actions can mint OIDC tokens that authenticate to external services. The 
 
 **Example workflow:**
 
+::: v-pre
 ```yaml
 jobs:
   ai-task:
@@ -137,6 +138,7 @@ jobs:
           # Use GITHUB_TOKEN to interact with GitHub
           gh pr create --title "AI-generated changes" --body "$response"
 ```
+:::
 
 ### How It Works
 
@@ -144,7 +146,7 @@ jobs:
 2. **Claims**: The token includes `aud`, `repository_owner_id`, `repository`
 3. **AI Gateway**: Your workflow passes the token as Bearer token to the AI gateway
 4. **Validation**: The gateway validates the signature and resolves your organization's binding
-5. **GITHUB_TOKEN**: Available automatically via `${{ github.token }}` — use for GitHub API operations (`gh` CLI, REST API)
+5. **GITHUB_TOKEN**: Available automatically via `$&#123;&#123; github.token &#125;&#125;` — use for GitHub API operations (`gh` CLI, REST API)
 
 ### Permissions Required
 
@@ -190,4 +192,4 @@ Ensure you're using the correct GitHub App: **[camer-digital-ai](https://github.
 
 ## Related
 
-- [GitHub PR Reviews](../opencode-integration/04-github-pr-reviews.md) — Automated PR review workflows
+- [GitHub PR Reviews](../opencode/04-github-pr-reviews.md) — Automated PR review workflows
