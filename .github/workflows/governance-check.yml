@@ -57,6 +57,15 @@ jobs:
               return;
             }
 
+            // Automated dependency PRs (Dependabot, Renovate, and other bots) cannot fill a
+            // human-accountability template, so the gate would perma-fail them. Skip the check
+            // for bot authors — it passes (not skipped), so it stays green even when configured
+            // as a required status check. A human is still accountable when reviewing/merging.
+            if (pr.user && pr.user.type === 'Bot') {
+              core.info(`AI Governance check skipped for bot author: ${pr.user.login}`);
+              return;
+            }
+
             const body = pr.body || '';
             const CHECKBOX = /[-*]\s*\[[xX]\]/;                 // a ticked checkbox (- or * bullet)
             const URL_OR_REF = /(https?:\/\/\S+)|(^|\s)#\d+/;   // a URL or #123 reference
