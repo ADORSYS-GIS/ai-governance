@@ -68,18 +68,26 @@ jobs:
 
             const body = pr.body || '';
             const CHECKBOX = /[-*]\s*\[[xX]\]/;                 // a ticked checkbox (- or * bullet)
-            const URL_OR_REF = /(https?:\/\/\S+)|(^|\s)#\d+/;   // a URL or #123 reference
+            // A URL or #123 reference. The #ref branch allows any non-word, non-`#` lead-in
+            // char (not just whitespace) so Markdown emphasis/punctuation around the ref —
+            // `**#123**`, `(#123)`, `` `#123` ``, `_#123_`, `-#123` — still counts.
+            const URL_OR_REF = /(https?:\/\/\S+)|(^|[^\w#])#\d+/; // a URL or #123 reference
 
             // Drop GitHub-template `[placeholder]` tokens so untouched scaffolding doesn't count.
             const stripPlaceholders = (s) => s.replace(/\[[^\]\n]+\]/g, '');
 
             // Text under the first heading whose title matches headingRe, up to the next heading.
+            // Fence-aware: a ``` fence toggles an "inside code block" state, and `#`-lines inside
+            // a fence are NOT treated as headings — otherwise a shell comment like `# fmt` at
+            // column 0 would end the section mid-code-block and hide the evidence below it.
             function sectionText(headingRe) {
               const lines = body.split(/\r?\n/);
               let capturing = false;
+              let inFence = false;
               const out = [];
               for (const line of lines) {
-                const h = line.match(/^#{1,6}\s+(.*\S)\s*$/);
+                if (/^\s*```/.test(line)) inFence = !inFence;
+                const h = inFence ? null : line.match(/^#{1,6}\s+(.*\S)\s*$/);
                 if (h) {
                   if (capturing) break;
                   if (headingRe.test(h[1])) capturing = true;
@@ -126,7 +134,20 @@ jobs:
             // Verification / Evidence / Screenshots sections), so an evidence-only link (a log,
             // screenshot, or metrics URL) cannot stand in for the ticket/decision that justifies
             // the work. Boilerplate governance URLs are already excluded by hasRealRef.
-            const intentArea = body.split(/^#{1,6}\s+.*\b(?:verification|screenshots?|evidence)\b/im)[0];
+            // Fence-aware (like sectionText): a `# verification`-style comment inside a code
+            // block must not be mistaken for the Verification heading and truncate the area.
+            function intentAreaText() {
+              const lines = body.split(/\r?\n/);
+              let inFence = false;
+              const out = [];
+              for (const line of lines) {
+                if (/^\s*```/.test(line)) inFence = !inFence;
+                if (!inFence && /^#{1,6}\s+.*\b(?:verification|screenshots?|evidence)\b/i.test(line)) break;
+                out.push(line);
+              }
+              return out.join('\n');
+            }
+            const intentArea = intentAreaText();
             if (!hasRealRef(intentArea)) {
               missing.push('a **source-of-truth reference** in the summary/intent — a URL or a `#123` issue/PR reference (an evidence-only or boilerplate governance link does not count).');
             }
