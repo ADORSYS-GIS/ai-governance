@@ -1,48 +1,120 @@
-# Lightbridge Code Intelligence Integrations
+# Lightbridge Code Intelligence Integration
 
 [Lightbridge Code Intelligence](https://github.com/vymalo/lightbridge-code-intelligence) is an AI-powered code review system that provides deep, repository-aware analysis of pull requests. It combines structural understanding (knowledge graphs) with semantic intelligence (vector embeddings) to deliver comprehensive, hallucination-free code reviews that integrate seamlessly into your development workflow.
 
-## Available Guides
+## How It Works
 
-| Guide | What it covers |
-|-------|---------------|
-| [Overview](00-overview.md) | System architecture, core technologies, and quality gates |
-| [GitHub Integration](01-github-integration.md) | GitHub App setup, webhook configuration, and PR review workflow |
-| [GitLab Integration](02-gitlab-integration.md) | GitLab integration, webhook setup, and review posting |
+```mermaid
+flowchart LR
+    A[🐙 GitHub / GitLab] --> C[⚙️ Agent Runner]
+    C --> D[📦 Clone Repo]
+    D --> E[🧠 Build Index]
+    E --> F["🤖 AI Agent Loop\n(opencode)"]
+    F <--> G[🚦 Quality Gates]
+    G --> H[✅ Review Posted]
 
-## Common Prerequisites
+    subgraph KB[" Knowledge Base "]
+      direction LR
+      I[🕸️ Graph]
+      J[🧠 Embeddings]
+    end
 
-### Install Lightbridge Code Intelligence
+    I & J --> F
 
-```bash
-# Clone the repository
-git clone https://github.com/vymalo/lightbridge-code-intelligence.git
-cd lightbridge-code-intelligence
-
-# Install dependencies
-pnpm install
-
-# Run locally
-pnpm dev
+    style A fill:#f1f5f9,stroke:#cbd5e1,color:#0f172a
+    style C fill:#fffbeb,stroke:#d97706,color:#92400e
+    style D fill:#f8fafc,stroke:#94a3b8,color:#334155
+    style E fill:#fffbeb,stroke:#d97706,color:#92400e
+    style F fill:#ede9fe,stroke:#8b5cf6,color:#5b21b6
+    style G fill:#cffafe,stroke:#0891b2,color:#0e7490
+    style H fill:#d1fae5,stroke:#10b981,color:#065f46
+    style I fill:#ede9fe,stroke:#8b5cf6,color:#5b21b6
+    style J fill:#cffafe,stroke:#0891b2,color:#0e7490
+    style KB fill:#f8fafc,stroke:#e2e8f0
 ```
 
-### Configure GitHub App
+### The Review Flow
 
-1. Go to [GitHub App Settings](https://github.com/settings/apps)
-2. Create a new GitHub App with:
-   - **Repository permissions**: Read and write for pull requests
-   - **Webhook**: Enable webhooks for `pull_request` events
-   - **Secret**: Generate a webhook secret
-3. Install the app to your repositories
-4. Note the App ID and installation ID
+1. **Trigger** — A GitHub or GitLab event (PR opened, `@mention`, or push to default branch) triggers the system.
 
-### Configure GitLab Integration
+2. **Clone & Index** — The system clones the repository and builds two indexes:
+   - **Structural Graph** (Neo4j): Shows how code is connected and what calls what
+   - **Semantic Embeddings** (pgvector): Shows what code does and implements
 
-1. Go to [GitLab Settings](https://gitlab.com/-/settings/integrations)
-2. Create a webhook with:
-   - **Trigger events**: Push, Merge request events
-   - **Secret**: Generate a webhook secret
-3. Note the webhook URL and secret
+3. **AI Agent Loop** — The AI agent explores the codebase using both indexes to understand the full context of the change.
+
+4. **Quality Gates** — Three deterministic gates ensure accuracy:
+   - **Coverage Gate**: Ensures every changed file is reviewed
+   - **Refute Pass**: Requires AI to challenge its own assumptions
+   - **Diff Alignment**: Validates comments anchor to actual changes
+
+5. **Review Posted** — Validated findings are posted to the PR via the single egress point.
+
+## What It Does
+
+- **Reviews pull requests automatically** — On every PR opened, it posts a fast, deterministic review; on a maintainer `@mention`, it runs a deep, repo-aware review.
+- **Answers questions** — A maintainer can `@mention` the system on an issue for conversational, repo-grounded answers.
+- **Indexes repositories** — Once approved, Lightbridge clones the default branch and builds dual indexes that all reviews draw on.
+
+## Two-Tier Review Strategy
+
+Running the full heavyweight loop on every PR is too slow and costly for most signals, so Lightbridge uses a two-tier strategy:
+
+| | **Fast Tier** | **Deep Tier** |
+|---|---|---|
+| **Trigger** | automatic, on `pull_request opened` | manual, on any `@mention` |
+| **Backbone** | **SAST** (deterministic) + lean diff-only LLM pass | full graph + vector retrieval, multi-turn |
+| **Retrieval** | none (no retrieval tools) | full |
+| **Tools** | small allowlist (`add_review_comment`, `finish`, `abort`) | full surface |
+| **Target** | ≲ 2 min | async; long ceiling (2h acceptable) |
+
+The fast tier turns SAST findings plus the raw diff into a human-readable verdict; the deep tier delivers the full repo-aware review.
+
+## Quality Gates
+
+### Coverage Gate
+The system enforces that the AI cannot simply skim a large PR and ignore complex files. A plugin intercepts the "finish review" tool and validates that every changed file has been read or commented on.
+
+### Refute Pass
+To prevent hallucinations, the system requires the AI to challenge its own assumptions. When proposing a high-severity finding, the AI shifts to a hardened skeptic persona and must search the knowledge base for evidence that its finding is wrong.
+
+### Diff Alignment
+The system validates that comments anchor to lines that actually changed. If the AI hallucinates line numbers, the finding is either realigned or downgraded to a general summary comment.
+
+## Core Technologies
+
+- **Syntax Trees**: Hierarchical representation of code structure (AST)
+- **Tree-sitter**: Incremental parser for partial/malformed code
+- **Knowledge Graph**: Graph database (Neo4j) for structural relationships
+- **Vector Embeddings**: Semantic search using high-dimensional vectors
+
+## Getting Started
+
+### Trigger a Review
+
+Simply mention the bot in a PR or issue:
+
+```markdown
+@lightbridge-bot Please review this PR
+```
+
+### Automatic Reviews
+
+Lightbridge will automatically post a fast review on every PR opened:
+
+```bash
+# PR opened
+# → Fast tier review (≤2 min)
+# → Comments on obvious issues
+```
+
+### On-Demand Reviews
+
+Trigger a deep review by mentioning the bot:
+
+```markdown
+@lightbridge-bot Please review this PR for security issues
+```
 
 ## Governance Note
 
@@ -55,52 +127,6 @@ Lightbridge Code Intelligence usage is subject to the [AI Working Agreement](../
 - **Quality gates**: Coverage, refute pass, and diff alignment to prevent hallucinations
 - **Isolated execution**: Each review runs in an ephemeral Kubernetes Job
 - **Single egress point**: Only the control plane talks to GitHub/GitLab
-
-## Architecture Overview
-
-```mermaid
-flowchart LR
-    GH[🐙 GitHub / GitLab] --> CP[🛡️ Control Plane]
-    CP --> AR[⚙️ Agent Runner]
-    AR --> CR[📦 Clone Repo]
-    CR --> BI[🧠 Build Index]
-    BI --> AI[🤖 AI Agent]
-    AI <--> QG[🚦 Quality Gates]
-    QG --> RP[✅ Review Posted]
-
-    subgraph KB[" Knowledge Base "]
-      direction LR
-      G[🕸️ Graph]
-      E[🧠 Embeddings]
-    end
-
-    G & E --> AI
-
-    style GH fill:#f1f5f9,stroke:#cbd5e1,color:#0f172a
-    style CP fill:#e0e7ff,stroke:#6366f1,color:#3730a3
-    style AR fill:#fffbeb,stroke:#d97706,color:#92400e
-    style CR fill:#f8fafc,stroke:#94a3b8,color:#334155
-    style BI fill:#fffbeb,stroke:#d97706,color:#92400e
-    style AI fill:#ede9fe,stroke:#8b5cf6,color:#5b21b6
-    style QG fill:#cffafe,stroke:#0891b2,color:#0e7490
-    style RP fill:#d1fae5,stroke:#10b981,color:#065f46
-    style G fill:#ede9fe,stroke:#8b5cf6,color:#5b21b6
-    style E fill:#cffafe,stroke:#0891b2,color:#0e7490
-    style KB fill:#f8fafc,stroke:#e2e8f0
-```
-
-## Core Technologies
-
-- **Syntax Trees**: Hierarchical representation of code structure (AST)
-- **Tree-sitter**: Incremental parser for partial/malformed code
-- **Knowledge Graph**: Graph database (Neo4j) for structural relationships
-- **Vector Embeddings**: Semantic search using high-dimensional vectors
-
-## Quality Gates
-
-1. **Coverage Gate**: Ensures every changed file is reviewed
-2. **Refute Pass**: Requires AI to challenge its own assumptions
-3. **Diff Alignment**: Validates comments anchor to actual changes
 
 ## Documentation
 
