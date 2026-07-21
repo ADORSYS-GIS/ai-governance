@@ -258,5 +258,4 @@ review:
 ## Next Steps
 
 - [GitHub Integration](01-github-integration.md)
-- [Local Setup](03-local-setup.md)
 - [Quality Gates Documentation](https://github.com/vymalo/lightbridge-code-intelligence/blob/main/docs/lightbridge-code-intelligence-overview.md#quality-gates)

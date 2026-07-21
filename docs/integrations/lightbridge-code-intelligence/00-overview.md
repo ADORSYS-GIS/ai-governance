@@ -9,7 +9,6 @@
 | [Overview](00-overview.md) | System architecture, core technologies, and quality gates |
 | [GitHub Integration](01-github-integration.md) | GitHub App setup, webhook configuration, and PR review workflow |
 | [GitLab Integration](02-gitlab-integration.md) | GitLab integration, webhook setup, and review posting |
-| [Local Setup](03-local-setup.md) | Development environment setup and configuration |
 
 ## Common Prerequisites
 
