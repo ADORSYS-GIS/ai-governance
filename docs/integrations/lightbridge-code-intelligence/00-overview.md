@@ -52,6 +52,14 @@ flowchart LR
 
 ## What It Does
 
+## Available Guides
+
+| Guide | What it covers |
+|-------|---------------|
+| [Overview](00-overview.md) | System architecture, review flow, and quality gates |
+| [GitHub Integration](01-github-integration.md) | GitHub App setup and webhook configuration |
+| [GitLab Integration](02-gitlab-integration.md) | GitLab webhook setup and configuration |
+
 - **Reviews pull requests automatically** — On every PR opened, it posts a fast, deterministic review; on a maintainer `@mention`, it runs a deep, repo-aware review.
 - **Answers questions** — A maintainer can `@mention` the system on an issue for conversational, repo-grounded answers.
 - **Indexes repositories** — Once approved, Lightbridge clones the default branch and builds dual indexes that all reviews draw on.
@@ -95,7 +103,7 @@ The system validates that comments anchor to lines that actually changed. If the
 Simply mention the bot in a PR or issue:
 
 ```markdown
-@lightbridge-bot Please review this PR
+@lightbridge-assistant Please review this PR
 ```
 
 ### Automatic Reviews
@@ -113,8 +121,80 @@ Lightbridge will automatically post a fast review on every PR opened:
 Trigger a deep review by mentioning the bot:
 
 ```markdown
-@lightbridge-bot Please review this PR for security issues
+@lightbridge-assistant Please review this PR for security issues
 ```
+
+## Platform Integration
+
+### GitHub
+
+1. **Create GitHub App**
+   - Go to [GitHub App Settings](https://github.com/settings/apps)
+   - Create new app with webhook URL: `https://your-domain.com/webhook`
+   - Repository permissions: Read and write for pull requests
+   - Install to your repositories
+
+2. **Configure Webhook**
+   - Add webhook with payload URL: `https://your-domain.com/webhook`
+   - Secret: Generate a webhook secret
+   - Events: `pull_request`, `push`
+
+3. **Access Token**
+   - Use GitHub App authentication (not PAT)
+   - Minimal permissions: Read and write for pull requests
+
+### GitLab
+
+1. **Create Webhook**
+   - Go to [GitLab Settings](https://gitlab.com/-/settings/integrations)
+   - Add webhook with URL: `https://your-domain.com/webhook`
+   - Secret: Generate a webhook secret
+   - Trigger events: Push, Merge request events
+
+2. **Access Token**
+   - Use GitLab App authentication (not PAT)
+   - Minimal permissions: Read and write for merge requests
+
+## Configuration
+
+### Webhook URL
+
+Configure the webhook URL in your control plane:
+
+```bash
+# Environment variable
+WEBHOOK_URL=https://your-domain.com/webhook
+
+# Or in config file
+webhook:
+  url: https://your-domain.com/webhook
+  secret: your_webhook_secret
+```
+
+### Access Tokens
+
+Use platform-specific authentication:
+
+**GitHub:**
+```bash
+GITHUB_APP_ID=your_app_id
+GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"
+GITHUB_WEBHOOK_SECRET=your_webhook_secret
+```
+
+**GitLab:**
+```bash
+GITLAB_APP_ID=your_app_id
+GITLAB_APP_SECRET=your_app_secret
+GITLAB_WEBHOOK_SECRET=your_webhook_secret
+```
+
+### Minimal Permissions
+
+- **GitHub**: Read and write for pull requests only
+- **GitLab**: Read and write for merge requests only
+- **No repository admin access required**
+- **No write access to code files**
 
 ## Governance Note
 
