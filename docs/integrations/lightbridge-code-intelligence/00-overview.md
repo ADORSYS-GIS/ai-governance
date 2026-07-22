@@ -97,14 +97,6 @@ The system validates that comments anchor to lines that actually changed. If the
 view
 ## Getting Started
 
-### Trigger a Review
-
-Simply mention the bot in a PR or issue:
-
-```markdown
-@lightbridge-assistant Please review this PR
-```
-
 ### Automatic Reviews
 
 Lightbridge will automatically post a fast review on every PR opened:
@@ -120,7 +112,7 @@ Lightbridge will automatically post a fast review on every PR opened:
 Trigger a deep review by mentioning the bot:
 
 ```markdown
-@lightbridge-assistant Please review this PR
+@lightbridge-assistant review
 ```
 
 ## Platform Integration

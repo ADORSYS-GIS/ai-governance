@@ -76,7 +76,7 @@ Lightbridge will automatically post a fast review on every PR opened:
 Trigger a deep review by mentioning the bot:
 
 ```markdown
-@lightbridge-assistant Please review this PR
+@lightbridge-assistant review
 ```
 
 ## Troubleshooting

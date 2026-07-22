@@ -72,7 +72,7 @@ Lightbridge will automatically post a fast review on every merge request opened:
 Trigger a deep review by mentioning the bot:
 
 ```markdown
-@lightbridge-assistant Please review this merge request
+@lightbridge-assistant review
 ```
 
 ## Troubleshooting
