@@ -70,29 +70,38 @@ export default withMermaid(defineConfig({
           { text: 'The case that it fades', link: '/perspectives/the-case-it-fades' },
         ],
       },
-      {
-        text: 'Integrations',
-        items: [
-          {
-            text: 'OpenCode',
-            collapsed: false,
-            items: [
-              { text: 'Overview', link: '/integrations/opencode/00-overview' },
-              { text: 'VSCode', link: '/integrations/opencode/01-vscode' },
-              { text: 'IntelliJ', link: '/integrations/opencode/02-intellij' },
-              { text: 'CLI', link: '/integrations/opencode/03-cli' },
-              { text: 'GitHub PR Reviews', link: '/integrations/opencode/04-github-pr-reviews' },
-            ],
-          },
-          {
-            text: 'GitHub Actions',
-            collapsed: false,
-            items: [
-              { text: 'Overview', link: '/integrations/github-actions/00-github-actions' },
-            ],
-          },
-        ],
-      },
+{
+         text: 'Integrations',
+         items: [
+           {
+             text: 'OpenCode',
+             collapsed: false,
+             items: [
+               { text: 'Overview', link: '/integrations/opencode/00-overview' },
+               { text: 'VSCode', link: '/integrations/opencode/01-vscode' },
+               { text: 'IntelliJ', link: '/integrations/opencode/02-intellij' },
+               { text: 'CLI', link: '/integrations/opencode/03-cli' },
+               { text: 'GitHub PR Reviews', link: '/integrations/opencode/04-github-pr-reviews' },
+             ],
+           },
+           {
+             text: 'GitHub Actions',
+             collapsed: false,
+             items: [
+               { text: 'Overview', link: '/integrations/github-actions/00-github-actions' },
+             ],
+           },
+           {
+             text: 'Lightbridge Code Intelligence',
+             collapsed: false,
+             items: [
+               { text: 'Overview', link: '/integrations/lightbridge-code-intelligence/00-overview' },
+               { text: 'GitHub Integration', link: '/integrations/lightbridge-code-intelligence/01-github-integration' },
+               { text: 'GitLab Integration', link: '/integrations/lightbridge-code-intelligence/02-gitlab-integration' },
+             ],
+           },
+         ],
+       },
       {
         text: 'Adoption',
         items: [{ text: 'Who uses this', link: '/adopters' }],
