@@ -115,38 +115,6 @@ Trigger a deep review by mentioning the bot:
 @lightbridge-assistant review
 ```
 
-## Platform Integration
-
-### GitHub
-
-1. **Create GitHub App**
-   - Go to [GitHub App Settings](https://github.com/settings/apps)
-   - Create new app with webhook URL: `https://your-domain.com/webhook`
-   - Repository permissions: Read and write for pull requests
-   - Install to your repositories
-
-2. **Configure Webhook**
-   - Add webhook with payload URL: `https://your-domain.com/webhook`
-   - Secret: Generate a webhook secret
-   - Events: `pull_request`, `push`
-
-3. **Access Token**
-   - Use GitHub App authentication (not PAT)
-   - Minimal permissions: Read and write for pull requests
-
-### GitLab
-
-1. **Create Webhook**
-   - Go to [GitLab Settings](https://gitlab.com/-/settings/integrations)
-   - Add webhook with URL: `https://your-domain.com/webhook`
-   - Secret: Generate a webhook secret
-   - Trigger events: Push, Merge request events
-
-2. **Access Token**
-   - Use GitLab App authentication (not PAT)
-   - Minimal permissions: Read and write for merge requests
-
-## Configuration
 
 ### Webhook URL
 
