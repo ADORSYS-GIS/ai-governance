@@ -61,7 +61,6 @@ flowchart LR
 | [GitLab Integration](02-gitlab-integration.md) | GitLab webhook setup and configuration |
 
 - **Reviews pull requests automatically** — On every PR opened, it posts a fast, deterministic review; on a maintainer `@mention`, it runs a deep, repo-aware review.
-- **Answers questions** — A maintainer can `@mention` the system on an issue for conversational, repo-grounded answers.
 - **Indexes repositories** — Once approved, Lightbridge clones the default branch and builds dual indexes that all reviews draw on.
 
 ## Two-Tier Review Strategy
@@ -95,7 +94,7 @@ The system validates that comments anchor to lines that actually changed. If the
 - **Tree-sitter**: Incremental parser for partial/malformed code
 - **Knowledge Graph**: Graph database (Neo4j) for structural relationships
 - **Vector Embeddings**: Semantic search using high-dimensional vectors
-
+view
 ## Getting Started
 
 ### Trigger a Review
@@ -121,7 +120,7 @@ Lightbridge will automatically post a fast review on every PR opened:
 Trigger a deep review by mentioning the bot:
 
 ```markdown
-@lightbridge-assistant Please review this PR for security issues
+@lightbridge-assistant Please review this PR
 ```
 
 ## Platform Integration

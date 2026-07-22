@@ -49,9 +49,9 @@ CONTROL_PLANE_URL=https://your-domain.com
 
 ### Minimal Permissions
 
+- **Access Token**: Developer role with only API permission
 - **Repository**: Read and write (for cloning repo and posting comments)
 - **Merge requests**: Read and write (for reading MR data and posting reviews)
-- **Issues**: Read and write (for reading issue data and posting answers)
 - **No admin access required**
 - **No write access to code files**
 
@@ -73,14 +73,6 @@ Trigger a deep review by mentioning the bot:
 
 ```markdown
 @lightbridge-assistant Please review this merge request
-```
-
-### Asking Questions
-
-Get repo-grounded answers to questions:
-
-```markdown
-@lightbridge-assistant Why does this function handle authentication errors this way?
 ```
 
 ## Troubleshooting

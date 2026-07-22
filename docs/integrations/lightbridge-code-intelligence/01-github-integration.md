@@ -79,14 +79,6 @@ Trigger a deep review by mentioning the bot:
 @lightbridge-assistant Please review this PR
 ```
 
-### Asking Questions
-
-Get repo-grounded answers to questions:
-
-```markdown
-@lightbridge-assistant Why does this function handle authentication errors this way?
-```
-
 ## Troubleshooting
 
 ### No reviews appearing
