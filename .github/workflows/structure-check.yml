@@ -1,0 +1,282 @@
+# Reusable Issue/PR structure-validity check (hosted in ADORSYS-GIS/ai-governance).
+#
+# Distinct from governance-check.yml, which stays as-is. This check:
+#
+#   1. Also covers ISSUES (epic/user-story/dev-ticket), which governance-check.yml never
+#      did — verifying the same AI Usage Declaration / source-of-truth / human-verification
+#      shape the issue forms already require, so an issue created by bypassing the form
+#      (e.g. via the API) gets caught instead of silently missing the governance content
+#      GitHub's own required-field UI would otherwise have guaranteed.
+#
+#   2. Re-checks the SAME three PR-body rules as governance-check.yml, but triggered on
+#      `pull_request_target` instead of `pull_request`. `pull_request`-triggered workflows
+#      evaluate the workflow *definition* from the PR's own head ref — a same-repo
+#      contributor can edit (or `if: false`) the job inside their own PR to silence the
+#      check, and a required check that reports "skipped" satisfies branch protection.
+#      `pull_request_target` always evaluates from the base branch, so the PR cannot edit
+#      away its own gate. This check does the same content read via the API only — it
+#      never checks out or executes the PR's code — so the usual pull_request_target
+#      risk (running untrusted code with a writable token) does not apply here.
+#
+# The rule logic is intentionally duplicated from governance-check.yml rather than
+# extracted into a shared script: governance-check.yml's fork-PR / token-permission
+# reasoning is deliberate and documented there, and this file must not become a second
+# place that reasoning has to be re-verified against every time either one changes.
+#
+# How repos opt in: add the caller workflow at .github/workflows/structure-check.yml
+# (see templates/.github/workflows/structure-check.yml) which calls this with:
+#   uses: ADORSYS-GIS/ai-governance/.github/workflows/structure-check.yml@<pinned-sha>
+#   permissions: { issues: write, pull-requests: write, contents: read }
+#
+# Source of truth: https://adorsys-gis.github.io/ai-governance/
+name: Structure Check
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: >-
+          Runner label(s) the check runs on. Defaults to GitHub-hosted
+          ubuntu-latest; pass a self-hosted label to run it on your own runners.
+        required: false
+        type: string
+        default: ubuntu-latest
+
+jobs:
+  structure-check:
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Check issue/PR structure
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const STICKY_MARKER = '<!-- ai-governance-structure-check -->';
+            const NEEDS_INFO_LABEL = 'needs-info';
+
+            const CHECKBOX = /[-*]\s*\[[xX]\]/;
+            const URL_OR_REF = /(https?:\/\/\S+)|(^|[^\w#])#\d+/;
+            const BOILERPLATE = /https?:\/\/(www\.)?adorsys-gis\.github\.io\/ai-governance\S*/gi;
+            const stripPlaceholders = (s) => s.replace(/\[[^\]\n]+\]/g, '');
+            const hasRealRef = (text) => URL_OR_REF.test(stripPlaceholders(text).replace(BOILERPLATE, ''));
+
+            function sectionText(body, headingRe) {
+              const lines = body.split(/\r?\n/);
+              let capturing = false;
+              let inFence = false;
+              const out = [];
+              for (const line of lines) {
+                if (/^\s*```/.test(line)) inFence = !inFence;
+                const h = inFence ? null : line.match(/^#{1,6}\s+(.*\S)\s*$/);
+                if (h) {
+                  if (capturing) break;
+                  if (headingRe.test(h[1])) capturing = true;
+                  continue;
+                }
+                if (capturing) out.push(line);
+              }
+              return out.join('\n');
+            }
+
+            function hasRealCodeBlock(text) {
+              const fences = text.match(/```[\s\S]*?```/g) || [];
+              return fences.some((f) => {
+                const inner = f.replace(/^```[^\n]*\n?/, '').replace(/```\s*$/, '');
+                return stripPlaceholders(inner).trim().length > 0;
+              });
+            }
+
+            async function upsertComment(issue_number, message) {
+              const { owner, repo } = context.repo;
+              try {
+                const comments = await github.paginate(github.rest.issues.listComments, {
+                  owner, repo, issue_number, per_page: 100,
+                });
+                const existing = comments.find((c) => (c.body || '').includes(STICKY_MARKER));
+                if (existing) {
+                  await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body: message });
+                } else {
+                  await github.rest.issues.createComment({ owner, repo, issue_number, body: message });
+                }
+              } catch (e) {
+                core.warning('Could not post the structure-check comment: ' + e.message);
+              }
+            }
+
+            async function setNeedsInfoLabel(issue_number, wanted) {
+              const { owner, repo } = context.repo;
+              try {
+                const { data: labels } = await github.rest.issues.listLabelsOnIssue({ owner, repo, issue_number });
+                const has = labels.some((l) => l.name === NEEDS_INFO_LABEL);
+                if (wanted && !has) {
+                  await github.rest.issues.addLabels({ owner, repo, issue_number, labels: [NEEDS_INFO_LABEL] });
+                } else if (!wanted && has) {
+                  await github.rest.issues.removeLabel({ owner, repo, issue_number, name: NEEDS_INFO_LABEL });
+                }
+              } catch (e) {
+                core.warning('Could not update the needs-info label: ' + e.message);
+              }
+            }
+
+            // ---------------------------------------------------------------
+            // Issues: epic.yml / user-story.yml / dev-ticket.yml all render an
+            // "### AI Usage Declaration" heading (dropdown, multiple) and a
+            // "### Source of truth (links)" heading (textarea) in the submitted
+            // body. GitHub's required-field validation already guarantees both
+            // are non-empty for anything actually opened through the form — the
+            // only way either is missing is an issue opened by bypassing the
+            // form (e.g. via the API), which is exactly what this catches.
+            // ---------------------------------------------------------------
+            async function checkIssue() {
+              const issue = context.payload.issue;
+              if (!issue) { core.info('No issue in payload; nothing to check.'); return; }
+              if (issue.user && issue.user.type === 'Bot') {
+                core.info(`Structure check skipped for bot author: ${issue.user.login}`);
+                return;
+              }
+
+              const FORM_LABELS = ['epic', 'user-story', 'ticket'];
+              const labels = (issue.labels || []).map((l) => (typeof l === 'string' ? l : l.name));
+              const isFormIssue = labels.some((l) => FORM_LABELS.includes(l));
+              const body = issue.body || '';
+              const missing = [];
+
+              if (!isFormIssue) {
+                missing.push(
+                  'This issue does not carry an `epic`, `user-story`, or `ticket` label, ' +
+                  'which the issue forms apply automatically — it looks like it was opened ' +
+                  'without going through [an issue form](https://adorsys-gis.github.io/ai-governance/).'
+                );
+              } else {
+                if (!/ai\s+usage\s+declaration/i.test(body)) {
+                  missing.push('an **AI Usage Declaration** section.');
+                } else {
+                  const aiSection = sectionText(body, /ai\s+usage\s+declaration/i);
+                  if (stripPlaceholders(aiSection).trim().length === 0) {
+                    missing.push('a filled-in **AI Usage Declaration** (the section is present but empty).');
+                  }
+                }
+
+                if (!/source\s+of\s+truth/i.test(body)) {
+                  missing.push('a **Source of truth** section.');
+                } else if (!hasRealRef(sectionText(body, /source\s+of\s+truth/i))) {
+                  missing.push('a real **source-of-truth reference** — a URL or a `#123` reference (a placeholder does not count).');
+                }
+
+                if (!/human\s+verification/i.test(body)) {
+                  missing.push('a **Human verification completed** section.');
+                } else if (!CHECKBOX.test(sectionText(body, /human\s+verification/i))) {
+                  missing.push('at least one **checked box** under Human verification completed.');
+                }
+              }
+
+              await setNeedsInfoLabel(issue.number, missing.length > 0);
+
+              if (missing.length > 0) {
+                const list = missing.map((m) => `- ${m}`).join('\n');
+                await upsertComment(issue.number,
+                  `${STICKY_MARKER}\n` +
+                  `### ❌ Structure check failed\n\n` +
+                  `This issue is missing the following:\n\n${list}\n\n` +
+                  `Please use one of the [issue forms](https://adorsys-gis.github.io/ai-governance/) ` +
+                  `and edit the issue to re-run the check.\n\n` +
+                  `> No source of truth means this ticket must be challenged — no source of truth = not ready.`
+                );
+              } else {
+                await upsertComment(issue.number,
+                  `${STICKY_MARKER}\n` +
+                  `### ✅ Structure check passed\n\n` +
+                  `This issue was created from a governance template with the required sections filled in.`
+                );
+              }
+            }
+
+            // ---------------------------------------------------------------
+            // PRs: identical rules to governance-check.yml (AI Usage Declaration
+            // with a checked option, a real source-of-truth reference in the
+            // intent area, real evidence in the Verification section) — this is
+            // a deliberate re-check under a trigger the PR itself cannot disable,
+            // not a lighter/different rule set. If it were lighter, a same-repo
+            // contributor could still bypass real content requirements by
+            // disabling governance-check.yml inside their own PR.
+            // ---------------------------------------------------------------
+            async function checkPullRequest() {
+              const pr = context.payload.pull_request;
+              if (!pr) { core.info('No pull_request in payload; nothing to check.'); return; }
+              if (pr.user && pr.user.type === 'Bot') {
+                core.info(`Structure check skipped for bot author: ${pr.user.login}`);
+                return;
+              }
+
+              const body = pr.body || '';
+              const missing = [];
+
+              if (!/ai\s+usage\s+declaration/i.test(body)) {
+                missing.push('an **AI Usage Declaration** section.');
+              } else {
+                const aiSection = sectionText(body, /ai\s+usage\s+declaration/i);
+                const hv = aiSection.search(/human\s+verification/i);
+                const aiOptions = hv >= 0 ? aiSection.slice(0, hv) : aiSection;
+                if (!CHECKBOX.test(aiOptions)) {
+                  missing.push('a **checked AI-usage option** — tick what AI was used for, or "Not used".');
+                }
+              }
+
+              function intentAreaText() {
+                const lines = body.split(/\r?\n/);
+                let inFence = false;
+                const out = [];
+                for (const line of lines) {
+                  if (/^\s*```/.test(line)) inFence = !inFence;
+                  if (!inFence && /^#{1,6}\s+.*\b(?:verification|screenshots?|evidence)\b/i.test(line)) break;
+                  out.push(line);
+                }
+                return out.join('\n');
+              }
+              if (!hasRealRef(intentAreaText())) {
+                missing.push('a **source-of-truth reference** in the summary/intent — a URL or a `#123` reference.');
+              }
+
+              if (!/verification/i.test(body)) {
+                missing.push('a **Verification** section.');
+              } else {
+                const ver = sectionText(body, /verification/i);
+                const evidence = CHECKBOX.test(ver) || hasRealCodeBlock(ver) || hasRealRef(ver);
+                if (!evidence) {
+                  missing.push('**verification evidence inside the Verification section**.');
+                }
+              }
+
+              if (missing.length > 0) {
+                const list = missing.map((m) => `- ${m}`).join('\n');
+                await upsertComment(pr.number,
+                  `${STICKY_MARKER}\n` +
+                  `### ❌ Structure check failed (tamper-resistant re-check)\n\n` +
+                  `This PR description is missing the following governance requirements:\n\n${list}\n\n` +
+                  `Please update the PR description using the ` +
+                  `[pull request template](https://adorsys-gis.github.io/ai-governance/04-pull-request-template) ` +
+                  `and edit the PR body to re-run the check.\n\n` +
+                  `_This check runs from the repository's default branch and reads the PR body only — ` +
+                  `it cannot be disabled by editing this workflow inside the PR._`
+                );
+                core.setFailed('Structure check failed:\n' + missing.map((m) => '  - ' + m.replace(/\*\*/g, '')).join('\n'));
+              } else {
+                await upsertComment(pr.number,
+                  `${STICKY_MARKER}\n` +
+                  `### ✅ Structure check passed\n\n` +
+                  `This PR declares AI usage, references a source of truth, and provides verification evidence.`
+                );
+                core.info('Structure check passed.');
+              }
+            }
+
+            if (context.eventName === 'issues') {
+              await checkIssue();
+            } else if (context.eventName === 'pull_request_target' || context.eventName === 'pull_request') {
+              await checkPullRequest();
+            } else {
+              core.info(`Unhandled event: ${context.eventName}`);
+            }
