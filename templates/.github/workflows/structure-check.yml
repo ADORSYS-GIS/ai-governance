@@ -1,0 +1,42 @@
+# Per-repo caller workflow for the AI Governance Structure Check.
+#
+# Drop this file at .github/workflows/structure-check.yml in a consuming repo to opt in.
+# It delegates to the reusable workflow hosted in ADORSYS-GIS/ai-governance, which:
+#   - reports on issues (epic/user-story/dev-ticket) opened without the AI Usage
+#     Declaration / Source of truth / Human verification sections the issue forms
+#     require — catches issues opened by bypassing the form (e.g. via the API).
+#   - re-checks the same PR-body governance requirements as governance.yml, but on
+#     `pull_request_target` — evaluated from this repo's default branch, so a PR cannot
+#     edit this workflow (or governance.yml) inside itself to disable its own gate.
+#
+# This check only ever reads issue/PR metadata via the GitHub API — it never checks out
+# or runs the PR's code — so pull_request_target here does not carry the usual
+# "untrusted code with a writable token" risk. Complements governance.yml, does not
+# replace it: keep both.
+#
+# The reusable workflow is pinned to an immutable commit SHA, not @main or a movable
+# tag, so a future push to ai-governance cannot change what runs here with write access.
+# Bump the SHA deliberately when adopting a new governance release.
+#
+# Source of truth: https://adorsys-gis.github.io/ai-governance/
+name: AI Governance Structure Check
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  structure-check:
+    # ADORSYS-GIS/ai-governance — TODO: replace @main with the merged commit SHA once
+    # this workflow lands on ai-governance's default branch (same pinning discipline as
+    # governance.yml — see that file's own header for why).
+    uses: ADORSYS-GIS/ai-governance/.github/workflows/structure-check.yml@main
+    # Runs on GitHub-hosted ubuntu-latest by default. To run on your own runners, add:
+    #   with:
+    #     runs-on: <your-self-hosted-runner-label>
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
