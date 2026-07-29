@@ -59,17 +59,17 @@ on:
         description: "Model for automatic PR reviews."
         required: false
         type: string
-        default: "camer-digital/adorsys-reviewer"
+        default: "camer-digital/minimax-m3"
       manual_model:
         description: "Model for /oc-triggered PR reviews."
         required: false
         type: string
-        default: "camer-digital/adorsys-reviewer-pro"
+        default: "camer-digital/minimax-m3"
       issue_model:
         description: "Model for /oc issue tasks."
         required: false
         type: string
-        default: "camer-digital/adorsys-reviewer-pro"
+        default: "camer-digital/minimax-m3"
       runs_on:
         description: "Runner label for both jobs — set a self-hosted label for repos without GitHub-hosted runners. Single label (use a runner group/label for multi-label fleets)."
         required: false
