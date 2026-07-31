@@ -1,0 +1,33 @@
+# Per-repo caller workflow for the shared Trivy + Gitleaks security gates.
+#
+# Drop this file at .github/workflows/security.yml in a consuming repo to opt in.
+# It delegates to the reusable workflow hosted in ADORSYS-GIS/ai-governance, which
+# runs a Gitleaks secret scan and a Trivy vulnerability/misconfiguration scan.
+#
+# Source of truth: https://adorsys-gis.github.io/ai-governance/
+name: Security Audit
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  scan:
+    # ADORSYS-GIS/ai-governance — TODO: replace @main with the merged commit SHA once
+    # this workflow lands on ai-governance's default branch (same pinning discipline as
+    # governance.yml — see that file's own header for why).
+    uses: ADORSYS-GIS/ai-governance/.github/workflows/security-gates.yml@main
+    secrets: inherit
+    with:
+      trivy-scan-type: 'fs'
+      trivy-target: '.'
+      # Runs on GitHub-hosted ubuntu-latest by default. To run on your own
+      # runners (e.g. because the calling repo is private and billing-blocked
+      # on GitHub-hosted minutes), set:
+      # runs-on: <your-self-hosted-runner-label>
