@@ -34,7 +34,7 @@ name: Structure Check
 on:
   workflow_call:
     inputs:
-      runs-on:
+      runs-on: ubuntu-latest
         description: >-
           Runner label(s) the check runs on. Defaults to GitHub-hosted
           ubuntu-latest; pass a self-hosted label to run it on your own runners.
