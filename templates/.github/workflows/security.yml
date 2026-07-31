@@ -4,6 +4,10 @@
 # It delegates to the reusable workflow hosted in ADORSYS-GIS/ai-governance, which
 # runs a Gitleaks secret scan and a Trivy vulnerability/misconfiguration scan.
 #
+# The reusable workflow is pinned to an immutable commit SHA, not @main or a movable
+# tag, so a future push to ai-governance cannot change what runs here with write
+# access. Bump the SHA deliberately when adopting a new security-gates release.
+#
 # Source of truth: https://adorsys-gis.github.io/ai-governance/
 name: Security Audit
 
@@ -19,10 +23,8 @@ permissions:
 
 jobs:
   scan:
-    # ADORSYS-GIS/ai-governance — TODO: replace @main with the merged commit SHA once
-    # this workflow lands on ai-governance's default branch (same pinning discipline as
-    # governance.yml — see that file's own header for why).
-    uses: ADORSYS-GIS/ai-governance/.github/workflows/security-gates.yml@main
+    # ADORSYS-GIS/ai-governance @ #27
+    uses: ADORSYS-GIS/ai-governance/.github/workflows/security-gates.yml@b0798a3b7218a21bd807405551fc6c73b63693b4
     secrets: inherit
     with:
       trivy-scan-type: 'fs'
