@@ -1,0 +1,86 @@
+# Reusable Trivy + Gitleaks security scanning gates (hosted in ADORSYS-GIS/ai-governance).
+#
+# Moved here from ADORSYS-GIS/ai-ops (a private repo). A private repo's
+# reusable workflows are only callable cross-repository if its Actions
+# "Access" setting explicitly allows it — ai-ops's was set to "none", so every
+# external caller (ai-helm, converse-frontends, lightbridge-authz) failed
+# instantly with GitHub's generic "This run likely failed because of a
+# workflow file issue" (zero jobs ever scheduled), regardless of which ref was
+# pinned. ai-governance is public, so any repo can call it with no extra
+# access configuration — the same reason governance-check.yml already works
+# cross-repo from here.
+#
+# How repos opt in: add a caller workflow (see
+# templates/.github/workflows/security.yml) which calls this with:
+#   uses: ADORSYS-GIS/ai-governance/.github/workflows/security-gates.yml@<sha>
+#   secrets: inherit
+#   with:
+#     trivy-scan-type: 'fs'   # or 'config'
+#     trivy-target: '.'
+#
+# Source of truth: https://adorsys-gis.github.io/ai-governance/
+name: Shared Security Scanning
+
+on:
+  workflow_call:
+    inputs:
+      trivy-scan-type:
+        description: 'Trivy scan type (fs, config)'
+        required: false
+        type: string
+        default: 'fs'
+      trivy-target:
+        description: 'Target directory for Trivy'
+        required: false
+        type: string
+        default: '.'
+      trivy-scanners:
+        description: 'Comma separated list of what security issues to detect'
+        required: false
+        type: string
+        default: 'vuln,secret,misconfig'
+      runs-on:
+        description: >-
+          Runner label(s) the scan jobs run on. Defaults to GitHub-hosted
+          ubuntu-latest; pass a self-hosted label (e.g. an ARC scale-set name)
+          to run on your own runners. Backward-compatible: callers that don't
+          set it keep ubuntu-latest.
+        required: false
+        type: string
+        default: 'ubuntu-latest'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  gitleaks:
+    name: Secret Scan (Gitleaks)
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ${{ inputs['runs-on'] }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: false
+
+  trivy:
+    name: Vulnerability Scan (Trivy)
+    runs-on: ${{ inputs['runs-on'] }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run Trivy scanner
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          scan-type: ${{ inputs.trivy-scan-type }}
+          scan-ref: ${{ inputs.trivy-target }}
+          scanners: ${{ inputs.trivy-scanners }}
+          ignore-unfixed: true
+          format: 'table'
+          exit-code: '1'
+          severity: 'HIGH,CRITICAL'
