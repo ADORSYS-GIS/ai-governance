@@ -32,4 +32,7 @@ features:
   - title: Perspectives
     details: Will Scrum survive the AI era? The debate — and the bigger-picture argument behind this kit.
     link: /perspectives/scrum-in-the-ai-era
+  - title: AI-Powered Code Review
+    details: Lightbridge Code Intelligence provides deep, repository-aware code reviews with quality gates and dual indexing.
+    link: /integrations/lightbridge-code-intelligence
 ---

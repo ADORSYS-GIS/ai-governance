@@ -91,6 +91,15 @@ export default withMermaid(defineConfig({
               { text: 'Overview', link: '/integrations/github-actions/00-github-actions' },
             ],
           },
+          {
+            text: 'Lightbridge Code Intelligence',
+            collapsed: false,
+            items: [
+              { text: 'Overview', link: '/integrations/lightbridge-code-intelligence/00-overview' },
+              { text: 'GitHub', link: '/integrations/lightbridge-code-intelligence/01-github-integration' },
+              { text: 'GitLab', link: '/integrations/lightbridge-code-intelligence/02-gitlab-integration' },
+            ],
+          },
         ],
       },
       {
