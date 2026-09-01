@@ -44,6 +44,7 @@ When opening issues or pull requests in this repo:
 - Fill in the **AI Usage Declaration** honestly (what AI was used for, what you verified).
 - Include a **source-of-truth link** (a URL or `#123` reference). No source of truth means the work is not ready.
 - Provide **verification evidence** (commands, logs, links, or checked verification boxes). No evidence means it is not done.
+- Keep **at most 5 open `Story` issues per repository**. `Task`/`Bug` are not capped. At the limit, either don't file the Story or say which one it displaces; park the rest as checklist items in their Epic so the scope stays readable.
 
 Source of truth and full doctrine: https://adorsys-gis.github.io/ai-governance/
 This stanza is intentionally thin — read the site; do not duplicate the doctrine here.
