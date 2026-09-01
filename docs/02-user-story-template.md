@@ -191,6 +191,35 @@ Human accountable owner: [Name]
 
 ---
 
+## 12a. WIP limit — at most 5 open Stories per repository
+
+A repository carries **at most five open `Story` issues at any time**. `Task`, `Bug` and
+`Feature` are not capped — only `Story`.
+
+**Why.** Direction, not capacity, is the usual constraint. A backlog of thirty open Stories does
+not describe thirty commitments; it describes one team and twenty-five items nobody chose. The
+cap forces the list to say what is actually being worked, and makes displacing something a
+visible decision rather than a silent accumulation.
+
+**At the limit**, do one of two things — never a third:
+
+1. **Don't file it.** The work is real but not now; it belongs in its Epic body.
+2. **Displace something.** File it, and say in the same breath which open Story it replaces and
+   where that one went.
+
+**Parking is folding, not deleting.** A parked Story becomes a checklist item in its Epic, with
+enough of its acceptance criteria to be re-expanded later. A cap that destroys scope is worse
+than no cap — the point is to stop pretending unscheduled work is scheduled, not to lose it.
+
+**Epics and sub-issues do not exempt a Story.** A Story under an active Epic still counts. If
+that makes an Epic hard to decompose, that is the signal: the Epic is being planned further
+ahead than it is being worked.
+
+> ⚠️ `gh issue create` and API calls **bypass the issue forms**, so they stamp no issue type.
+> A Story filed that way arrives untyped and is invisible to this count. Set the type explicitly
+> (`updateIssueIssueType`) after creating, or the cap leaks one issue at a time — the same way
+> the type taxonomy itself decayed before the forms carried `type:`.
+
 ## 13. Definition of Ready
 
 This story is ready only when:
